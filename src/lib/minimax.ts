@@ -97,7 +97,7 @@ function fallbackReport(agent: AgentDefinition, sources: SearchResult[], note: s
   const findings: GeneratedReport["findings"] = sources.slice(0, 8).map((source, index) => ({
     kind: inferFindingKind(agent.id),
     title: source.title,
-    body: source.snippet || `${source.title} kaynagi inceleme icin bulundu.`,
+    body: source.snippet || `${source.title} kaynağı inceleme için bulundu.`,
     sourceUrl: source.url,
     score: Math.max(40, 90 - index * 5),
     metadata: { source: source.source }
@@ -106,8 +106,8 @@ function fallbackReport(agent: AgentDefinition, sources: SearchResult[], note: s
   if (findings.length === 0) {
     findings.push({
       kind: FindingKind.SYSTEM,
-      title: "Kaynak bulunamadi",
-      body: "SearXNG bu calisma icin sonuc dondurmedi. Sorgular veya kaynak listesi genisletilmeli.",
+      title: "Kaynak bulunamadı",
+      body: "Bu çalışma için arama sonucu döndürülemedi. Sorgular veya kaynak listesi genişletilmeli.",
       score: 10,
       metadata: { note }
     });

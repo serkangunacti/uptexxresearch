@@ -65,9 +65,9 @@ model Report {
   runId          String?         @unique
   title          String
   summary        String
-  htmlPath       String
-  pdfPath        String
-  publicUrl      String
+  htmlPath       String          @default("")
+  pdfPath        String          @default("")
+  publicUrl      String          @default("")
   slackFileId    String?
   slackMessageTs String?
   createdAt      DateTime        @default(now())
