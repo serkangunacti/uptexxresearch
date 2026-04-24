@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
 import { RunButton } from "./RunButton";
 import { DeleteRunButton } from "./DeleteRunButton";
+import { AutoRefresh } from "./AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function Home() {
 
   return (
     <div className="page-shell">
+      <AutoRefresh intervalMs={5000} />
       {/* Page Header */}
       <header className="page-header">
         <p className="greeting">{timeStr}</p>
