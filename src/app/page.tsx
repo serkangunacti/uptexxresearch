@@ -23,12 +23,12 @@ async function getDashboardData() {
     }),
     prisma.report.findMany({
       orderBy: { createdAt: "desc" },
-      take: 8,
+      take: 3,
       include: { agent: true },
     }),
     prisma.agentRun.findMany({
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 3,
       include: { agent: true },
     }),
     prisma.agentRun.count({ where: { status: "SUCCEEDED" } }),
@@ -113,14 +113,18 @@ export default async function Home() {
                 style={{ "--i": index } as React.CSSProperties}
               >
                 <div className="agent-card-header">
-                  <h3>{agent.name}</h3>
+                  <Link href={`/agents/${agent.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1 }}>
+                    <h3>{agent.name}</h3>
+                  </Link>
                   <span className={`status-badge ${isActive ? "active" : "paused"}`}>
                     <span className="status-dot" />
                     {isActive ? "Aktif" : "Pasif"}
                   </span>
                 </div>
 
-                <p className="agent-desc">{agent.description}</p>
+                <Link href={`/agents/${agent.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                  <p className="agent-desc">{agent.description}</p>
+                </Link>
 
                 <div className="agent-card-meta">
                   <span className="meta-badge">
@@ -135,7 +139,7 @@ export default async function Home() {
                 <div className="agent-card-footer">
                   <span className="last-run-info">
                     {lastRun
-                      ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR")}`
+                      ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`
                       : "Henüz çalıştırılmadı"}
                   </span>
                   <RunButton agentId={agent.id} disabled={!isActive} />
@@ -163,10 +167,10 @@ export default async function Home() {
                   <span className="report-agent">{report.agent.name}</span>
                   <span className="report-title">{report.title}</span>
                   <span className="report-date" style={{ marginLeft: "auto", color: "gray" }}>
-                    {report.createdAt.toLocaleString("tr-TR")}
+                    {report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
                   </span>
                 </Link>
-                <div style={{ paddingLeft: "12px" }}>
+                <div className="report-actions" style={{ paddingLeft: "12px" }}>
                   {report.runId && <DeleteRunButton runId={report.runId} />}
                 </div>
               </div>
@@ -188,7 +192,7 @@ export default async function Home() {
                 <span className={`run-dot ${run.status.toLowerCase()}`} />
                 <div className="run-info">
                   <p className="run-agent">{run.agent.name}</p>
-                  <p className="run-meta">{run.createdAt.toLocaleString("tr-TR")}</p>
+                  <p className="run-meta">{run.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</p>
                 </div>
                 <span className={`run-status-tag ${run.status.toLowerCase()}`}>
                   {run.status}

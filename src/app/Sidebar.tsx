@@ -18,7 +18,7 @@ const navItems = [
     ),
   },
   {
-    href: "/#agents",
+    href: "/agents",
     label: "Ajanlar",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -28,7 +28,7 @@ const navItems = [
     ),
   },
   {
-    href: "/#reports",
+    href: "/reports",
     label: "Raporlar",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +40,7 @@ const navItems = [
     ),
   },
   {
-    href: "/#run-log",
+    href: "/runs",
     label: "Çalışma Geçmişi",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

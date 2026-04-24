@@ -29,7 +29,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <header className="report-page-header">
         <p className="report-agent-name">{report.agent.name}</p>
         <h1>{report.title}</h1>
-        <p className="report-page-date">{report.createdAt.toLocaleString("tr-TR")}</p>
+        <p className="report-page-date">{report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</p>
       </header>
 
       <p className="report-summary-text">{report.summary}</p>
