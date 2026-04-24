@@ -44,7 +44,8 @@ export async function searchAllQueries(queries: string[]): Promise<SearchResult[
 
   const searchPromises = queries.map(async (query) => {
     try {
-      return await searchWeb(query, 5);
+      // Get up to 15 results per query since we have plenty of time now
+      return await searchWeb(query, 15);
     } catch (error) {
       console.error(`[search] Failed for query: ${query}`, error);
       throw error; // Fail fast if API key is missing

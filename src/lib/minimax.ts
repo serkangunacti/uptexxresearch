@@ -33,10 +33,7 @@ export async function generateReportWithMiniMax(
     baseURL: env.MINIMAX_BASE_URL
   });
 
-  // Only send top 5 sources to reduce context length and generation time
-  const topSources = sources.slice(0, 5);
-
-  const sourceBlock = topSources
+  const sourceBlock = sources
     .map((source, index) => {
       return [
         `#${index + 1}`,
@@ -54,7 +51,7 @@ export async function generateReportWithMiniMax(
       {
         role: "system",
         content:
-          "You are a disciplined research analyst for Uptexx, an IT consulting and software licensing company. Return only valid JSON. Do not include markdown fences. Limit your response to MAXIMUM 3 findings to ensure a fast response."
+          "You are a disciplined research analyst for Uptexx, an IT consulting and software licensing company. Return only valid JSON. Do not include markdown fences. Extract as many relevant findings as possible from the provided sources. Do not limit your findings."
       },
       {
         role: "user",

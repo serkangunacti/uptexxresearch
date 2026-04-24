@@ -29,25 +29,41 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     },
   });
 
-  // Execute synchronously but with a 50s timeout safeguard
-  // Vercel Hobby allows 60s. We timeout at 50s to safely update the DB to FAILED.
+  // Trigger GitHub Actions workflow for background processing
   try {
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("İşlem çok uzun sürdü (Zaman Aşımı). Lütfen tekrar deneyin.")), 50000)
-    );
+    const githubToken = process.env.GITHUB_PAT;
+    const githubRepo = process.env.GITHUB_REPO; // e.g. "username/repo"
 
-    const report = await Promise.race([
-      executeAgentRun(agent.id, run.id),
-      timeoutPromise
-    ]) as any;
+    if (!githubToken || !githubRepo) {
+      throw new Error("GITHUB_PAT veya GITHUB_REPO çevre değişkenleri eksik. Lütfen Vercel'e ekleyin.");
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${githubRepo}/actions/workflows/agent-runner.yml/dispatches`, {
+      method: "POST",
+      headers: {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": `token ${githubToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref: "main",
+        inputs: {
+          agentId: agent.id,
+          runId: run.id
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`GitHub Actions tetiklenemedi: ${response.statusText} - ${errorText}`);
+    }
 
     return NextResponse.json({ 
-      run: { ...run, status: "SUCCEEDED" }, 
-      reportId: report.id,
-      message: "Rapor başarıyla oluşturuldu!" 
+      run: { ...run, status: "QUEUED" }, 
+      message: "Görev GitHub Actions'a gönderildi. Birkaç dakika içinde tamamlanacak!" 
     });
   } catch (error) {
-    // Force mark as failed if timeout hit before Vercel kills us
     await prisma.agentRun.update({
       where: { id: run.id },
       data: {
