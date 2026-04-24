@@ -15,7 +15,7 @@ const envSchema = z.object({
 
 export const env = envSchema.parse({
   DATABASE_URL: process.env.DATABASE_URL,
-  APP_PUBLIC_URL: process.env.APP_PUBLIC_URL ?? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000",
+  APP_PUBLIC_URL: process.env.APP_PUBLIC_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
   MINIMAX_API_KEY: process.env.MINIMAX_API_KEY,
   MINIMAX_BASE_URL: process.env.MINIMAX_BASE_URL,
   MINIMAX_MODEL: process.env.MINIMAX_MODEL,

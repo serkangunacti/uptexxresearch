@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { ensureAgents } from "@/lib/agents";
 import { prisma } from "@/lib/db";
+import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
 import { RunButton } from "./RunButton";
 
 export const dynamic = "force-dynamic";
 
 async function getDashboardData() {
   await ensureAgents();
-  const [agents, reports, runs, succeededCount] = await Promise.all([
+
+  // Get agent order from definitions
+  const definitionOrder = AGENT_DEFINITIONS.map((d) => d.id);
+
+  const [agentsRaw, reports, runs, succeededCount] = await Promise.all([
     prisma.agent.findMany({
-      orderBy: { createdAt: "asc" },
       include: {
         runs: { orderBy: { createdAt: "desc" }, take: 1 },
         reports: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -27,6 +31,13 @@ async function getDashboardData() {
     }),
     prisma.agentRun.count({ where: { status: "SUCCEEDED" } }),
   ]);
+
+  // Sort agents by definition order (stable)
+  const agents = agentsRaw.sort((a, b) => {
+    const ia = definitionOrder.indexOf(a.id);
+    const ib = definitionOrder.indexOf(b.id);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
 
   return { agents, reports, runs, succeededCount };
 }
