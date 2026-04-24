@@ -17,7 +17,7 @@ const findingSchema = z.object({
 const reportSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
-  findings: z.array(findingSchema).min(1).max(20)
+  findings: z.array(findingSchema).min(1)
 });
 
 export async function generateReportWithMiniMax(
@@ -82,6 +82,7 @@ export async function generateReportWithMiniMax(
   const validated = reportSchema.safeParse(parsed);
 
   if (!validated.success) {
+    console.error("Zod validation failed:", validated.error);
     return fallbackReport(agent, sources, "MiniMax response could not be parsed as the expected JSON report shape.");
   }
 

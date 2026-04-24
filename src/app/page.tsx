@@ -158,13 +158,18 @@ export default async function Home() {
             <p className="empty-state">Henüz rapor oluşmadı.</p>
           ) : (
             reports.map((report) => (
-              <Link href={`/reports/${report.id}`} className="report-item" key={report.id}>
-                <span className="report-agent">{report.agent.name}</span>
-                <span className="report-title">{report.title}</span>
-                <span className="report-date">
-                  {report.createdAt.toLocaleString("tr-TR")}
-                </span>
-              </Link>
+              <div className="report-item-wrapper" key={report.id} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border-color)", padding: "12px 0" }}>
+                <Link href={`/reports/${report.id}`} className="report-item" style={{ flex: 1, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span className="report-agent">{report.agent.name}</span>
+                  <span className="report-title">{report.title}</span>
+                  <span className="report-date" style={{ marginLeft: "auto", color: "gray" }}>
+                    {report.createdAt.toLocaleString("tr-TR")}
+                  </span>
+                </Link>
+                <div style={{ paddingLeft: "12px" }}>
+                  <DeleteRunButton runId={report.runId} />
+                </div>
+              </div>
             ))
           )}
         </div>
