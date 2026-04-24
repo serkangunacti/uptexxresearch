@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AgentStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum FindingKind {
+  LEAD
+  OPPORTUNITY
+  NEWS
+  MARKET_SIGNAL
+  SYSTEM
+}
+
+model Agent {
+  id            String     @id
+  slug          String     @unique
+  name          String
+  description   String
+  cadence       String
+  scheduleLabel String
+  defaultPrompt String
+  status        AgentStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  runs          AgentRun[]
+  reports       Report[]
+}
+
+model AgentRun {
+  id         String    @id @default(cuid())
+  agentId    String
+  status     RunStatus @default(QUEUED)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  error      String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  agent      Agent     @relation(fields: [agentId], references: [id])
+  report     Report?
+
+  @@index([agentId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Report {
+  id             String          @id @default(cuid())
+  agentId        String
+  runId          String?         @unique
+  title          String
+  summary        String
+  htmlPath       String
+  pdfPath        String
+  publicUrl      String
+  slackFileId    String?
+  slackMessageTs String?
+  createdAt      DateTime        @default(now())
+  agent          Agent           @relation(fields: [agentId], references: [id])
+  run            AgentRun?       @relation(fields: [runId], references: [id])
+  findings       ReportFinding[]
+
+  @@index([agentId, createdAt])
+}
+
+model ReportFinding {
+  id        String      @id @default(cuid())
+  reportId  String
+  kind      FindingKind
+  title     String
+  body      String
+  sourceUrl String?
+  score     Int?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  report    Report      @relation(fields: [reportId], references: [id])
+}
