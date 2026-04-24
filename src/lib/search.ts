@@ -5,7 +5,9 @@ import type { SearchResult } from "./types";
  */
 export async function searchWeb(query: string, maxResults = 10): Promise<SearchResult[]> {
   try {
-    return await searchDuckDuckGo(query, maxResults);
+    const results = await searchDuckDuckGo(query, maxResults);
+    if (results.length > 0) return results;
+    throw new Error("DDG returned 0 results (likely Captcha)");
   } catch (error) {
     console.warn(`[search] DuckDuckGo failed: ${error}`);
     // Fallback: try SearXNG
