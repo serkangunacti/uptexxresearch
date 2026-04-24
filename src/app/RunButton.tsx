@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function RunButton({ agentId, disabled }: { agentId: string; disabled?: boolean }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -9,26 +9,37 @@ export function RunButton({ agentId, disabled }: { agentId: string; disabled?: b
     setState("loading");
     try {
       const response = await fetch(`/api/agents/${agentId}/run`, { method: "POST" });
-      setState(response.ok ? "done" : "error");
       if (response.ok) {
-        setTimeout(() => window.location.reload(), 1500);
+        setState("done");
+        // Poll for completion — refresh page after a delay
+        setTimeout(() => window.location.reload(), 45000);
+      } else {
+        setState("error");
       }
     } catch {
       setState("error");
     }
   }
 
+  // Auto-refresh hint
+  useEffect(() => {
+    if (state === "done") {
+      const interval = setInterval(() => window.location.reload(), 30000);
+      return () => clearInterval(interval);
+    }
+  }, [state]);
+
   const label = {
     idle: "Çalıştır",
-    loading: "Kuyrukta...",
-    done: "Başarılı ✓",
-    error: "Hata",
+    loading: "Gönderiliyor...",
+    done: "Araştırılıyor ⏳",
+    error: "Hata ✗",
   }[state];
 
   return (
     <button
       className={`run-btn ${state}`}
-      disabled={disabled || state === "loading"}
+      disabled={disabled || state === "loading" || state === "done"}
       onClick={run}
     >
       {state === "loading" && <span className="spinner" />}
