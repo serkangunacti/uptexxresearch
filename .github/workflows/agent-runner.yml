@@ -1,0 +1,35 @@
+name: Agent Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      agentId:
+        description: 'Agent ID to run'
+        required: true
+      runId:
+        description: 'Run ID in the database'
+        required: true
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Gives plenty of time for 100s of results
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute Agent
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: npx tsx scripts/github-runner.ts ${{ github.event.inputs.agentId }} ${{ github.event.inputs.runId }}
