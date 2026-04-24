@@ -89,7 +89,10 @@ export async function generateReportWithMiniMax(
 }
 
 function safeParseJson(content: string) {
-  const trimmed = content.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  // Strip <think>...</think> blocks from reasoning models
+  const withoutThink = content.replace(/<think>[\s\S]*?<\/think>/g, "");
+  
+  const trimmed = withoutThink.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
   return JSON.parse(trimmed);
 }
 
