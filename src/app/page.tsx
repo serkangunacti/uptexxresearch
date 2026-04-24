@@ -3,6 +3,7 @@ import { ensureAgents } from "@/lib/agents";
 import { prisma } from "@/lib/db";
 import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
 import { RunButton } from "./RunButton";
+import { DeleteRunButton } from "./DeleteRunButton";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,9 @@ export default async function Home() {
                 <span className={`run-status-tag ${run.status.toLowerCase()}`}>
                   {run.status}
                 </span>
+                <div className="run-actions">
+                  <DeleteRunButton runId={run.id} />
+                </div>
               </div>
             ))
           )}
