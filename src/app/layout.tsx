@@ -10,7 +10,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Uptexx Research Automation",
-  description: "Slack PDF teslimatli arastirma ajanlari paneli",
+  description: "Slack PDF teslimatlı araştırma ajanları paneli",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

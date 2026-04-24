@@ -64,7 +64,7 @@ export default async function Home() {
         <div className="stat-card" style={{ "--i": 1 } as React.CSSProperties}>
           <p className="stat-label">Toplam Rapor</p>
           <p className="stat-value">{reports.length > 0 ? reports.length + "+" : "0"}</p>
-          <p className="stat-sub">PDF arşivi VPS&apos;te</p>
+          <p className="stat-sub">Veritabanında</p>
         </div>
         <div className="stat-card" style={{ "--i": 2 } as React.CSSProperties}>
           <p className="stat-label">Başarılı Çalışma</p>
@@ -122,7 +122,7 @@ export default async function Home() {
                   <span className="last-run-info">
                     {lastRun
                       ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR")}`
-                      : "Henüz çalışmadı"}
+                      : "Henüz çalıştırılmadı"}
                   </span>
                   <RunButton agentId={agent.id} disabled={!isActive} />
                 </div>
@@ -162,7 +162,7 @@ export default async function Home() {
             <span className="count">{runs.length}</span>
           </div>
           {runs.length === 0 ? (
-            <p className="empty-state">Kuyruk boş.</p>
+            <p className="empty-state">Henüz çalışma yok.</p>
           ) : (
             runs.map((run) => (
               <div className="run-item" key={run.id}>

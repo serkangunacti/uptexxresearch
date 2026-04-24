@@ -99,7 +99,7 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section-label">Menu</div>
+          <div className="nav-section-label">Menü</div>
           {navItems.map((item) => {
             const isActive =
               item.href === "/"
@@ -124,11 +124,11 @@ export function Sidebar() {
           <div className="nav-section-label" style={{ padding: "0 0 10px" }}>Sistem</div>
           <div className="system-row">
             <span className="system-dot" />
-            SearXNG
+            Supabase
           </div>
           <div className="system-row">
             <span className="system-dot" />
-            Redis
+            Vercel
           </div>
           <div className="system-row">
             <span className="system-dot" />

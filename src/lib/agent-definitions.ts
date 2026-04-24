@@ -4,46 +4,46 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
   {
     id: "research-tr",
     slug: "arastirma-ajani-tr",
-    name: "Arastirma Ajani TR",
-    description: "Turkiye'de IT danismanligi, lisans satisi, Microsoft 365, Azure ve sistem destek firsatlarini arastirir.",
-    cadence: "2 gunde bir",
-    scheduleLabel: "2 gunde bir 10:00",
+    name: "Araştırma Ajanı TR",
+    description: "Türkiye'de IT danışmanlığı, lisans satışı, Microsoft 365, Azure ve sistem destek fırsatlarını araştırır.",
+    cadence: "2 günde bir",
+    scheduleLabel: "2 günde bir 10:00",
     status: "ACTIVE",
     schedule: { hour: 10, minute: 0, everyDays: 2 },
     queries: [
-      "\"Microsoft 365\" \"satinalma\" \"teklif\" Turkiye",
-      "\"Azure\" \"bakim destek\" \"teklif\" Turkiye",
-      "\"IT danismanligi\" \"ihale\" Turkiye",
-      "\"sistem bakim destek\" \"aylik\" \"firma\""
+      "\"Microsoft 365\" \"satınalma\" \"teklif\" Türkiye",
+      "\"Azure\" \"bakım destek\" \"teklif\" Türkiye",
+      "\"IT danışmanlığı\" \"ihale\" Türkiye",
+      "\"sistem bakım destek\" \"aylık\" \"firma\""
     ],
     prompt:
-      "Turkiye pazarinda Uptexx icin potansiyel musteri olabilecek IT danismanligi, lisans satisi, Microsoft 365, Azure, bakim ve sistem destek taleplerini bul. Kaynak linki, ihtiyac sinyali ve oncelik skoru ver."
+      "Türkiye pazarında Uptexx için potansiyel müşteri olabilecek IT danışmanlığı, lisans satışı, Microsoft 365, Azure, bakım ve sistem destek taleplerini bul. Kaynak linki, ihtiyaç sinyali ve öncelik skoru ver."
   },
   {
     id: "research-tr-sme",
     slug: "arastirma-ajani-tr-ii",
-    name: "Arastirma Ajani TR II",
-    description: "500 kullaniciya kadar olabilecek Turkiye firmalarini listeler ve iletisim bilgilerini zenginlestirir.",
-    cadence: "2 gunde bir",
-    scheduleLabel: "2 gunde bir 11:00",
+    name: "Araştırma Ajanı TR II",
+    description: "500 kullanıcıya kadar olabilecek Türkiye firmalarını listeler ve iletişim bilgilerini zenginleştirir.",
+    cadence: "2 günde bir",
+    scheduleLabel: "2 günde bir 11:00",
     status: "ACTIVE",
     schedule: { hour: 11, minute: 0, everyDays: 2 },
     queries: [
-      "\"calisan sayisi\" \"50\" \"500\" \"Turkiye\" \"iletisim\"",
-      "\"Microsoft is ortagi\" \"Turkiye\" \"iletisim\"",
-      "\"sanayi\" \"teknoloji\" \"iletisim\" \"Turkiye\"",
-      "\"firma\" \"bilgi teknolojileri\" \"iletisim\" \"Turkiye\""
+      "\"çalışan sayısı\" \"50\" \"500\" \"Türkiye\" \"iletişim\"",
+      "\"Microsoft iş ortağı\" \"Türkiye\" \"iletişim\"",
+      "\"sanayi\" \"teknoloji\" \"iletişim\" \"Türkiye\"",
+      "\"firma\" \"bilgi teknolojileri\" \"iletişim\" \"Türkiye\""
     ],
     prompt:
-      "Turkiye'de 500 kullaniciya kadar olabilecek firmalari bul. Firma adi, adres, telefon, web sitesi, e-posta varsa e-posta, sektor, kullanici sayisi tahmini ve kaynak guven skoru uret. Ayni firmayi tekrar etme."
+      "Türkiye'de 500 kullanıcıya kadar olabilecek firmaları bul. Firma adı, adres, telefon, web sitesi, e-posta varsa e-posta, sektör, kullanıcı sayısı tahmini ve kaynak güven skoru üret. Aynı firmayı tekrar etme."
   },
   {
     id: "research-eu",
     slug: "arastirma-ajani-eu",
-    name: "Arastirma Ajani EU",
-    description: "Avrupa odakli yazilim proje danismanligi ve freelance is firsatlarini arastirir.",
-    cadence: "2 gunde bir",
-    scheduleLabel: "2 gunde bir 08:00",
+    name: "Araştırma Ajanı EU",
+    description: "Avrupa odaklı yazılım proje danışmanlığı ve freelance iş fırsatlarını araştırır.",
+    cadence: "2 günde bir",
+    scheduleLabel: "2 günde bir 08:00",
     status: "ACTIVE",
     schedule: { hour: 8, minute: 0, everyDays: 2 },
     queries: [
@@ -53,15 +53,15 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
       "\"Azure\" \"consultant\" \"hourly\" Europe"
     ],
     prompt:
-      "Avrupa odakli donemsel veya proje bazli yazilim danismanligi islerini bul. Saatlik 40 USD altindaki ilanlari rapora alma. Upwork/Freelancer benzeri kaynaklarda proje ozeti, butce, saatlik oran, musteri sinyali ve basvuru onerisi ver."
+      "Avrupa odaklı dönemsel veya proje bazlı yazılım danışmanlığı işlerini bul. Saatlik 40 USD altındaki ilanları rapora alma. Upwork/Freelancer benzeri kaynaklarda proje özeti, bütçe, saatlik oran, müşteri sinyali ve başvuru önerisi ver."
   },
   {
     id: "research-ai",
     slug: "arastirma-ajani-ai",
-    name: "Arastirma Ajani AI",
-    description: "AI model, fiyat, release, benchmark ve urun guncellemelerini gunluk raporlar.",
-    cadence: "Her gun",
-    scheduleLabel: "Her gun 09:00",
+    name: "Araştırma Ajanı AI",
+    description: "AI model, fiyat, release, benchmark ve ürün güncellemelerini günlük raporlar.",
+    cadence: "Her gün",
+    scheduleLabel: "Her gün 09:00",
     status: "ACTIVE",
     schedule: { hour: 9, minute: 0, everyDays: 1 },
     queries: [
@@ -71,15 +71,15 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
       "site:ai.google.dev Gemini release pricing"
     ],
     prompt:
-      "Dunyadaki AI model ve platform guncellemelerini topla. Yeni model, fiyat degisikligi, API ozelligi, benchmark veya onemli urun duyurusunu kaynak linkleriyle raporla."
+      "Dünyadaki AI model ve platform güncellemelerini topla. Yeni model, fiyat değişikliği, API özelliği, benchmark veya önemli ürün duyurusunu kaynak linkleriyle raporla."
   },
   {
     id: "research-crypto",
     slug: "arastirma-ajani-crypto",
-    name: "Arastirma Ajani CRYPTO",
-    description: "Kripto haberleri, piyasa sinyalleri, buyuk transferler ve Polymarket beklentilerini gunluk raporlar.",
-    cadence: "Her gun",
-    scheduleLabel: "Her gun 07:00",
+    name: "Araştırma Ajanı CRYPTO",
+    description: "Kripto haberleri, piyasa sinyalleri, büyük transferler ve Polymarket beklentilerini günlük raporlar.",
+    cadence: "Her gün",
+    scheduleLabel: "Her gün 07:00",
     status: "ACTIVE",
     schedule: { hour: 7, minute: 0, everyDays: 1 },
     queries: [
@@ -89,27 +89,27 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
       "crypto exchange reserve inflow outflow news"
     ],
     prompt:
-      "Kripto piyasasindaki onemli gelismeleri, yukselis/dusus sinyallerini, buyuk transferleri, Polymarket beklentilerini ve riskleri ozetle. Finansal tavsiye verme; arastirma ve risk sinyali formatinda raporla."
+      "Kripto piyasasındaki önemli gelişmeleri, yükseliş/düşüş sinyallerini, büyük transferleri, Polymarket beklentilerini ve riskleri özetle. Finansal tavsiye verme; araştırma ve risk sinyali formatında raporla."
   },
   {
     id: "finance-crypto",
     slug: "finans-ajani-crypto",
-    name: "Finans Ajani Crypto",
-    description: "Gelecekte Binance islemleri icin ayrilmis pasif ajan. Simdilik hicbir trade islemi yapmaz.",
+    name: "Finans Ajanı Crypto",
+    description: "Gelecekte Binance işlemleri için ayrılmış pasif ajan. Şimdilik hiçbir trade işlemi yapmaz.",
     cadence: "Pasif",
-    scheduleLabel: "Schedule yok",
+    scheduleLabel: "Zamanlama yok",
     status: "PAUSED",
     queries: [],
     prompt:
-      "Pasif ajan. Arastirma Ajani CRYPTO raporlarini gelecekte okuyacak; simdilik trade, API emir veya otomatik karar yok."
+      "Pasif ajan. Araştırma Ajanı CRYPTO raporlarını gelecekte okuyacak; şimdilik trade, API emir veya otomatik karar yok."
   },
   {
     id: "research-it",
     slug: "arastirma-ajani-it",
-    name: "Arastirma Ajani IT",
-    description: "Teknoloji dunyasi urun lansmanlari, yonetici degisimleri ve kurumsal gelismeleri gunluk raporlar.",
-    cadence: "Her gun",
-    scheduleLabel: "Her gun 08:30",
+    name: "Araştırma Ajanı IT",
+    description: "Teknoloji dünyası ürün lansmanları, yönetici değişimleri ve kurumsal gelişmeleri günlük raporlar.",
+    cadence: "Her gün",
+    scheduleLabel: "Her gün 08:30",
     status: "ACTIVE",
     schedule: { hour: 8, minute: 30, everyDays: 1 },
     queries: [
@@ -119,7 +119,7 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
       "technology company appoints CEO CTO CIO today"
     ],
     prompt:
-      "IT dunyasindaki son gelismeleri, urun lansmanlarini, ust duzey yonetici atamalarini/gorevden ayrilmalari ve kurumsal teknoloji haberlerini kaynak linkleriyle ozetle."
+      "IT dünyasındaki son gelişmeleri, ürün lansmanlarını, üst düzey yönetici atamalarını/görevden ayrılmaları ve kurumsal teknoloji haberlerini kaynak linkleriyle özetle."
   }
 ];
 
