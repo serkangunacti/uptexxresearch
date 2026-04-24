@@ -49,7 +49,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   } catch (error) {
     // Force mark as failed if timeout hit before Vercel kills us
     await prisma.agentRun.update({
-      where: { id: runId },
+      where: { id: run.id },
       data: {
         status: "FAILED",
         finishedAt: new Date(),
