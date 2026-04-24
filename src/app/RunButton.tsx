@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function RunButton({ agentId, disabled }: { agentId: string; disabled?: boolean }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const router = useRouter();
 
   async function run() {
     setState("loading");
@@ -11,28 +13,22 @@ export function RunButton({ agentId, disabled }: { agentId: string; disabled?: b
       const response = await fetch(`/api/agents/${agentId}/run`, { method: "POST" });
       if (response.ok) {
         setState("done");
-        // Poll for completion — refresh page after a delay
-        setTimeout(() => window.location.reload(), 45000);
+        router.refresh(); // Refresh dashboard data immediately
+        setTimeout(() => setState("idle"), 3000); // Reset button after 3s
       } else {
         setState("error");
+        setTimeout(() => setState("idle"), 3000);
       }
     } catch {
       setState("error");
+      setTimeout(() => setState("idle"), 3000);
     }
   }
 
-  // Auto-refresh hint
-  useEffect(() => {
-    if (state === "done") {
-      const interval = setInterval(() => window.location.reload(), 30000);
-      return () => clearInterval(interval);
-    }
-  }, [state]);
-
   const label = {
     idle: "Çalıştır",
-    loading: "Gönderiliyor...",
-    done: "Araştırılıyor ⏳",
+    loading: "Araştırılıyor ⏳",
+    done: "Tamamlandı ✓",
     error: "Hata ✗",
   }[state];
 
