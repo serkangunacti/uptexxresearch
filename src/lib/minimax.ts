@@ -50,12 +50,11 @@ export async function generateReportWithMiniMax(
   const response = await client.chat.completions.create({
     model: env.MINIMAX_MODEL,
     temperature: 0.2,
-    max_tokens: 1500, // Force a concise response to finish before 50s timeout
     messages: [
       {
         role: "system",
         content:
-          "You are a disciplined research analyst for Uptexx, an IT consulting and software licensing company. Return only valid JSON. Do not include markdown fences."
+          "You are a disciplined research analyst for Uptexx, an IT consulting and software licensing company. Return only valid JSON. Do not include markdown fences. Limit your response to MAXIMUM 3 findings to ensure a fast response."
       },
       {
         role: "user",
