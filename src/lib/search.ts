@@ -42,20 +42,24 @@ export async function searchAllQueries(queries: string[]): Promise<SearchResult[
   const allResults: SearchResult[] = [];
   const seen = new Set<string>();
 
-  for (const query of queries) {
+  const searchPromises = queries.map(async (query) => {
     try {
-      const results = await searchWeb(query, 5);
-      for (const result of results) {
-        if (!seen.has(result.url)) {
-          seen.add(result.url);
-          allResults.push(result);
-        }
-      }
+      return await searchWeb(query, 5);
     } catch (error) {
       console.error(`[search] Failed for query: ${query}`, error);
       throw error; // Fail fast if API key is missing
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  });
+
+  const resultsArrays = await Promise.all(searchPromises);
+
+  for (const results of resultsArrays) {
+    for (const result of results) {
+      if (!seen.has(result.url)) {
+        seen.add(result.url);
+        allResults.push(result);
+      }
+    }
   }
 
   return allResults;
