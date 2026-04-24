@@ -35,8 +35,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     // Add content
     doc.fontSize(24).text(report.title || "Arastirma Raporu", { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Ajan: ${report.agent.name}`, { align: 'center', color: 'gray' });
-    doc.text(`Tarih: ${report.createdAt.toLocaleString("tr-TR")}`, { align: 'center', color: 'gray' });
+    doc.fontSize(12).fillColor('gray').text(`Ajan: ${report.agent.name}`, { align: 'center' });
+    doc.fillColor('gray').text(`Tarih: ${report.createdAt.toLocaleString("tr-TR")}`, { align: 'center' });
     doc.moveDown(2);
 
     doc.fontSize(14).fillColor('black').text("Ozet:", { underline: true });
@@ -65,7 +65,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     const pdfBuffer = await pdfPromise;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as any, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

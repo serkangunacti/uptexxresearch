@@ -167,7 +167,7 @@ export default async function Home() {
                   </span>
                 </Link>
                 <div style={{ paddingLeft: "12px" }}>
-                  <DeleteRunButton runId={report.runId} />
+                  {report.runId && <DeleteRunButton runId={report.runId} />}
                 </div>
               </div>
             ))
