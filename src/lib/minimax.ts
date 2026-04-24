@@ -33,7 +33,10 @@ export async function generateReportWithMiniMax(
     baseURL: env.MINIMAX_BASE_URL
   });
 
-  const sourceBlock = sources
+  // Only send top 5 sources to reduce context length and generation time
+  const topSources = sources.slice(0, 5);
+
+  const sourceBlock = topSources
     .map((source, index) => {
       return [
         `#${index + 1}`,
@@ -47,6 +50,7 @@ export async function generateReportWithMiniMax(
   const response = await client.chat.completions.create({
     model: env.MINIMAX_MODEL,
     temperature: 0.2,
+    max_tokens: 1500, // Force a concise response to finish before 50s timeout
     messages: [
       {
         role: "system",
