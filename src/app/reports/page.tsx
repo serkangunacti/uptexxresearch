@@ -25,15 +25,15 @@ export default async function ReportsPage() {
           <p className="empty-state">Henüz rapor oluşmadı.</p>
         ) : (
           reports.map((report) => (
-            <div className="report-item-wrapper" key={report.id} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--border-color)", padding: "12px 0" }}>
-              <Link href={`/reports/${report.id}`} className="report-item" style={{ flex: 1, textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "12px" }}>
-                <span className="report-agent">{report.agent.name}</span>
-                <span className="report-title">{report.title}</span>
-                <span className="report-date" style={{ marginLeft: "auto", color: "gray" }}>
-                  {report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
-                </span>
-              </Link>
-              <div className="report-actions" style={{ paddingLeft: "12px" }}>
+            <div className="run-item" key={report.id}>
+              <div className="run-info" style={{ flex: 1 }}>
+                <Link href={`/reports/${report.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                  <p className="run-agent">{report.agent.name}</p>
+                  <p style={{ margin: "4px 0", color: "var(--text-primary)", fontWeight: 500 }}>{report.title}</p>
+                  <p className="run-meta">{report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</p>
+                </Link>
+              </div>
+              <div className="run-actions">
                 {report.runId && <DeleteRunButton runId={report.runId} />}
               </div>
             </div>
