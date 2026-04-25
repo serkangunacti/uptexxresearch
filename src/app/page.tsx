@@ -163,6 +163,7 @@ export default async function Home() {
           ) : (
             reports.map((report) => (
               <div className="run-item" key={report.id}>
+                <span className="run-dot" style={{ background: "var(--brand)" }} />
                 <div className="run-info" style={{ flex: 1 }}>
                   <Link href={`/reports/${report.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                     <p className="run-agent">{report.agent.name}</p>

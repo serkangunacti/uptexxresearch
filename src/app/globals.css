@@ -935,7 +935,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s;
 }
