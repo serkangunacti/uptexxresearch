@@ -1,58 +1,70 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+const W = 595.28; // A4 width (pt)
+const H = 841.89; // A4 height (pt)
+const ML = 50;    // margin left
+const MR = 50;    // margin right
+const MB = 50;    // margin bottom
+const CW = W - ML - MR; // content width
 
-function hexToRgb(hex: string) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return rgb((n >> 16) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255);
+function clamp(val: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, val));
 }
 
-const C = {
-  brand:    hexToRgb("8b5cf6"), // violet accent
-  dark:     hexToRgb("111114"),
-  heading:  hexToRgb("f0f0f5"),
-  body:     hexToRgb("d4d4d8"),
-  muted:    hexToRgb("71717a"),
-  white:    rgb(1, 1, 1),
-  success:  hexToRgb("22c55e"),
-  warning:  hexToRgb("f59e0b"),
-  blue:     hexToRgb("60a5fa"),
-  bg:       hexToRgb("18181b"),
-  bgCard:   hexToRgb("27272a"),
-  line:     hexToRgb("3f3f46"),
-};
-
-/** Wrap text manually to avoid pdf-lib width overflow */
-function wrapText(text: string, maxChars: number): string[] {
-  const words = text.split(" ");
+/** Split text into lines that fit within maxWidth given font & size */
+function breakLines(text: string, font: { widthOfTextAtSize: (t: string, s: number) => number }, size: number, maxWidth: number): string[] {
+  if (!text) return [""];
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    if ((current + " " + word).trim().length > maxChars) {
-      if (current) lines.push(current.trim());
-      current = word;
+  let line = "";
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
+      lines.push(line);
+      line = w;
     } else {
-      current = current ? current + " " + word : word;
+      line = test;
     }
   }
-  if (current) lines.push(current.trim());
-  return lines;
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
 }
 
-const KIND_COLORS: Record<string, ReturnType<typeof rgb>> = {
-  LEAD:          hexToRgb("a78bfa"),
-  OPPORTUNITY:   hexToRgb("34d399"),
-  NEWS:          hexToRgb("60a5fa"),
-  MARKET_SIGNAL: hexToRgb("fbbf24"),
-  SYSTEM:        hexToRgb("9ca3af"),
+// ── Colour palette ─────────────────────────────────────────────────────────
+const C = {
+  white:   rgb(1, 1, 1),
+  bg:      rgb(0.047, 0.047, 0.067),    // #0c0c11
+  panel:   rgb(0.09, 0.09, 0.11),       // #171719
+  card:    rgb(0.15, 0.15, 0.18),       // #262630
+  violet:  rgb(0.545, 0.361, 0.965),    // #8b5cf6
+  violetD: rgb(0.427, 0.227, 0.929),    // #6d39ed
+  line:    rgb(0.22, 0.22, 0.27),       // #383844
+  head:    rgb(0.941, 0.941, 0.961),    // #f0f0f5
+  body:    rgb(0.76,  0.76,  0.80),     // #c2c2cc
+  muted:   rgb(0.44,  0.44,  0.55),     // #70708c
+  success: rgb(0.133, 0.773, 0.369),    // #22c55e
+  warning: rgb(0.961, 0.620, 0.043),    // #f59e0b
+  blue:    rgb(0.376, 0.647, 0.980),    // #60a5fa
+  red:     rgb(0.937, 0.267, 0.267),    // #ef4444
 };
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+const KIND_COLORS: Record<string, ReturnType<typeof rgb>> = {
+  LEAD:          C.violet,
+  OPPORTUNITY:   C.success,
+  NEWS:          C.blue,
+  MARKET_SIGNAL: C.warning,
+  SYSTEM:        C.muted,
+};
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await context.params;
 
@@ -68,205 +80,224 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Rapor bulunamadı." }, { status: 404 });
     }
 
-    // ─── Create document ────────────────────────────────────────────────────
+    // ── Create PDF ─────────────────────────────────────────────────────────
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.setTitle(report.title ?? "Araştırma Raporu");
+    pdfDoc.setAuthor("Uptexx Research Automation");
+    pdfDoc.setCreationDate(new Date());
+
     const fontReg  = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const [W, H] = PageSizes.A4; // 595 x 841 pt
-    const ML = 52, MR = 52;
-    const contentW = W - ML - MR;
+    // State that persists across pages
+    let currentPage = pdfDoc.addPage([W, H]);
+    let cursorY = H - ML;
 
-    let page = pdfDoc.addPage([W, H]);
-    let y = H - 52; // cursor from top
+    // Draw the dark background on the first page
+    currentPage.drawRectangle({ x: 0, y: 0, width: W, height: H, color: C.bg });
 
-    // ─── Helper: add new page when running out of space ────────────────────
-    function ensureSpace(needed: number) {
-      if (y - needed < 52) {
-        page = pdfDoc.addPage([W, H]);
-        y = H - 52;
+    function newPage() {
+      currentPage = pdfDoc.addPage([W, H]);
+      // dark bg
+      currentPage.drawRectangle({ x: 0, y: 0, width: W, height: H, color: C.bg });
+      // thin violet top stripe
+      currentPage.drawRectangle({ x: 0, y: H - 3, width: W, height: 3, color: C.violet });
+      cursorY = H - 40;
+    }
+
+    function needSpace(required: number) {
+      if (cursorY - required < MB) newPage();
+    }
+
+    /** Returns height consumed */
+    function writeText(
+      text: string,
+      opts: {
+        font?: typeof fontReg;
+        size?: number;
+        color?: ReturnType<typeof rgb>;
+        x?: number;
+        maxWidth?: number;
+        lineGap?: number;
+      } = {}
+    ): number {
+      const {
+        font    = fontReg,
+        size    = 10,
+        color   = C.body,
+        x       = ML,
+        maxWidth = CW,
+        lineGap  = 1.4,
+      } = opts;
+
+      const lineHeight = size * lineGap;
+      const lines = breakLines(String(text ?? ""), font, size, maxWidth);
+      const totalH = lines.length * lineHeight;
+
+      needSpace(totalH + 4);
+      for (const line of lines) {
+        currentPage.drawText(line, { x, y: cursorY, size, font, color });
+        cursorY -= lineHeight;
       }
+      return totalH;
     }
 
-    function drawRect(x: number, py: number, w: number, h: number, color: ReturnType<typeof rgb>) {
-      page.drawRectangle({ x, y: py, width: w, height: h, color });
-    }
-
-    function drawLine(py: number, color = C.line) {
-      page.drawLine({
-        start: { x: ML, y: py },
-        end:   { x: W - MR, y: py },
-        thickness: 0.5,
+    function hRule(color = C.line, thickness = 0.5) {
+      currentPage.drawLine({
+        start: { x: ML, y: cursorY },
+        end:   { x: W - MR, y: cursorY },
+        thickness,
         color,
       });
     }
 
-    function drawText(
-      text: string,
-      opts: {
-        x?: number; size?: number; font?: typeof fontReg;
-        color?: ReturnType<typeof rgb>; maxWidth?: number;
-      } = {}
-    ): number {
-      const {
-        x = ML, size = 10, font = fontReg,
-        color = C.body, maxWidth = contentW,
-      } = opts;
-      const charsPerLine = Math.floor(maxWidth / (size * 0.52));
-      const lines = wrapText(String(text), charsPerLine);
-      const lineH = size * 1.5;
-      ensureSpace(lines.length * lineH + 4);
-      for (const line of lines) {
-        page.drawText(line, { x, y, size, font, color });
-        y -= lineH;
-      }
-      return lines.length * lineH;
-    }
+    // ══════════════════════════════════════════════════════════════════════
+    // COVER BLOCK
+    // ══════════════════════════════════════════════════════════════════════
+    const coverH = 140;
+    currentPage.drawRectangle({ x: 0, y: H - coverH, width: W, height: coverH, color: C.panel });
+    currentPage.drawRectangle({ x: 0, y: H - coverH - 2, width: W, height: 2, color: C.violet });
+    // violet left accent bar
+    currentPage.drawRectangle({ x: 0, y: H - coverH, width: 4, height: coverH, color: C.violetD });
 
-    // ════════════════════════════════════════════════════════════════════════
-    // COVER HEADER (dark band)
-    // ════════════════════════════════════════════════════════════════════════
-    const headerH = 130;
-    drawRect(0, H - headerH, W, headerH, C.dark);
-    // violet accent stripe
-    drawRect(0, H - headerH - 3, W, 3, C.brand);
-
-    // brand label
-    page.drawText("UPTEXX RESEARCH", {
-      x: ML, y: H - 36,
-      size: 9, font: fontBold, color: C.brand,
+    // Brand
+    currentPage.drawText("UPTEXX RESEARCH", {
+      x: ML, y: H - 30, size: 8, font: fontBold, color: C.violet,
     });
 
-    // Report title (center-ish, wrapped at 55 chars)
-    const titleLines = wrapText(report.title || "Araştırma Raporu", 55);
-    let titleY = H - 62;
+    // Title — wrap at 52 chars
+    const titleLines = breakLines(report.title ?? "Araştırma Raporu", fontBold, 20, W - ML * 2 - 40);
+    let ty = H - 56;
     for (const tl of titleLines) {
-      const tw = fontBold.widthOfTextAtSize(tl, 20);
-      page.drawText(tl, {
-        x: (W - tw) / 2, y: titleY,
-        size: 20, font: fontBold, color: C.heading,
-      });
-      titleY -= 28;
+      currentPage.drawText(tl, { x: ML, y: ty, size: 20, font: fontBold, color: C.head });
+      ty -= 28;
     }
 
-    // Meta row
+    // Meta bar
     const dateStr = report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
-    const meta = `${report.agent.name}  ·  ${dateStr}`;
-    const mw = fontReg.widthOfTextAtSize(meta, 9);
-    page.drawText(meta, {
-      x: (W - mw) / 2, y: H - headerH + 16,
-      size: 9, font: fontReg, color: C.muted,
+    const metaLine = `${report.agent.name}  ·  ${dateStr}  ·  ${report.findings.length} bulgu`;
+    currentPage.drawText(metaLine, {
+      x: ML, y: H - coverH + 18, size: 9, font: fontReg, color: C.muted,
     });
 
-    y = H - headerH - 24; // move cursor below header
+    cursorY = H - coverH - 28;
 
-    // ════════════════════════════════════════════════════════════════════════
-    // SUMMARY SECTION
-    // ════════════════════════════════════════════════════════════════════════
-    y -= 8;
-    // Section label
-    drawText("ÖZET", { size: 8, font: fontBold, color: C.brand });
-    y -= 2;
-    drawLine(y);
-    y -= 12;
+    // ══════════════════════════════════════════════════════════════════════
+    // ÖZET SECTION
+    // ══════════════════════════════════════════════════════════════════════
+    needSpace(60);
+    writeText("ÖZET", { font: fontBold, size: 8, color: C.violet });
+    cursorY -= 4;
+    hRule(C.violet, 0.8);
+    cursorY -= 12;
+    writeText(report.summary ?? "Özet bulunamadı.", { size: 10, color: C.body, lineGap: 1.55 });
+    cursorY -= 20;
 
-    drawText(report.summary || "Özet bulunamadı.", { size: 10, color: C.body });
-
-    // ════════════════════════════════════════════════════════════════════════
-    // FINDINGS
-    // ════════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    // BULGULAR SECTION
+    // ══════════════════════════════════════════════════════════════════════
     if (report.findings.length > 0) {
-      y -= 20;
-      ensureSpace(30);
-      drawText(`BULGULAR  (${report.findings.length})`, { size: 8, font: fontBold, color: C.brand });
-      y -= 2;
-      drawLine(y);
-      y -= 14;
+      needSpace(40);
+      writeText(`BULGULAR  —  ${report.findings.length} ADET`, { font: fontBold, size: 8, color: C.violet });
+      cursorY -= 4;
+      hRule(C.violet, 0.8);
+      cursorY -= 14;
 
-      report.findings.forEach((finding, i) => {
-        const cardH = 18 + (wrapText(finding.title, 72).length * 15) +
-                      (wrapText(finding.body || "", 72).length * 14) + 32;
-        ensureSpace(cardH);
+      for (let i = 0; i < report.findings.length; i++) {
+        const f = report.findings[i];
+        const kindColor = KIND_COLORS[f.kind] ?? C.muted;
 
-        // card background
-        drawRect(ML - 6, y - cardH + 18, contentW + 12, cardH, C.bgCard);
+        // Estimate card height
+        const titleH  = breakLines(f.title ?? "", fontBold, 11, CW - 30).length * 17;
+        const bodyH   = breakLines(f.body  ?? "", fontReg,  10, CW - 8).length  * 16;
+        const srcH    = f.sourceUrl ? 16 : 0;
+        const cardH   = titleH + bodyH + srcH + 52;
 
-        // index pill
-        const idxLabel = String(i + 1).padStart(2, "0");
-        drawRect(ML - 6, y - 3, 26, 20, C.brand);
-        page.drawText(idxLabel, { x: ML - 6 + 5, y: y + 2, size: 9, font: fontBold, color: C.white });
+        needSpace(cardH + 10);
 
-        // kind badge
-        const kindColor = KIND_COLORS[finding.kind] ?? C.muted;
-        const kindW = fontBold.widthOfTextAtSize(finding.kind, 7) + 10;
-        drawRect(ML + 26, y - 1, kindW, 16, rgb(kindColor.red * 0.25, kindColor.green * 0.25, kindColor.blue * 0.25));
-        page.drawText(finding.kind, {
-          x: ML + 31, y: y + 3,
-          size: 7, font: fontBold, color: kindColor,
+        const cardTop = cursorY;
+        const cardBot = cursorY - cardH;
+
+        // Card bg
+        currentPage.drawRectangle({
+          x: ML - 4, y: cardBot, width: CW + 8, height: cardH, color: C.card,
+        });
+        // Left accent border
+        currentPage.drawRectangle({
+          x: ML - 4, y: cardBot, width: 3, height: cardH, color: kindColor,
         });
 
+        cursorY = cardTop - 10;
+
+        // Row: index pill  +  kind badge  +  score
+        const idxStr = String(i + 1).padStart(2, "0");
+        // index
+        currentPage.drawRectangle({ x: ML + 2, y: cursorY - 3, width: 24, height: 16, color: C.violet });
+        currentPage.drawText(idxStr, { x: ML + 5, y: cursorY, size: 9, font: fontBold, color: C.white });
+
+        // kind
+        currentPage.drawText(f.kind, { x: ML + 32, y: cursorY, size: 8, font: fontBold, color: kindColor });
+
         // score
-        if (finding.score != null) {
-          const scoreTxt = `Skor: ${finding.score}`;
-          const scoreX = ML + 30 + kindW + 6;
-          page.drawText(scoreTxt, { x: scoreX, y: y + 3, size: 7, font: fontReg, color: C.muted });
+        if (f.score != null) {
+          const scoreX = ML + 32 + fontBold.widthOfTextAtSize(f.kind, 8) + 12;
+          currentPage.drawText(`Skor: ${f.score}`, { x: scoreX, y: cursorY, size: 8, font: fontReg, color: C.muted });
+        }
+        cursorY -= 20;
+
+        // Title
+        writeText(f.title ?? "", { font: fontBold, size: 11, color: C.head, x: ML + 8, maxWidth: CW - 16 });
+        cursorY -= 4;
+
+        // Body
+        writeText(f.body ?? "", { size: 10, color: C.body, x: ML + 8, maxWidth: CW - 16, lineGap: 1.55 });
+
+        // Source
+        if (f.sourceUrl) {
+          cursorY -= 2;
+          writeText(`Kaynak: ${f.sourceUrl}`, { size: 8, color: C.blue, x: ML + 8, maxWidth: CW - 16 });
         }
 
-        y -= 22;
-
-        // title
-        drawText(finding.title, { x: ML, size: 11, font: fontBold, color: C.heading });
-        y -= 2;
-
-        // body
-        drawText(finding.body || "", { x: ML, size: 10, color: C.body });
-
-        // source url
-        if (finding.sourceUrl) {
-          y -= 2;
-          const srcLines = wrapText(`Kaynak: ${finding.sourceUrl}`, 90);
-          for (const sl of srcLines) {
-            page.drawText(sl, { x: ML, y, size: 8, font: fontReg, color: C.blue });
-            y -= 12;
-          }
-        }
-
-        y -= 14; // gap between findings
-      });
+        cursorY -= 14; // gap between cards
+      }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     // FOOTER on every page
-    // ════════════════════════════════════════════════════════════════════════
-    const pages = pdfDoc.getPages();
-    pages.forEach((pg, idx) => {
-      const footer = `Uptexx Research Automation  ·  Sayfa ${idx + 1}/${pages.length}`;
-      const fw = fontReg.widthOfTextAtSize(footer, 8);
-      pg.drawText(footer, { x: (W - fw) / 2, y: 22, size: 8, font: fontReg, color: C.muted });
-      pg.drawLine({ start: { x: ML, y: 36 }, end: { x: W - MR, y: 36 }, thickness: 0.5, color: C.line });
-    });
+    // ══════════════════════════════════════════════════════════════════════
+    const allPages = pdfDoc.getPages();
+    const total = allPages.length;
+    for (let p = 0; p < total; p++) {
+      const pg = allPages[p];
+      const footTxt = `Uptexx Research Automation  ·  Sayfa ${p + 1} / ${total}`;
+      const fw = fontReg.widthOfTextAtSize(footTxt, 8);
+      pg.drawLine({ start: { x: ML, y: 38 }, end: { x: W - MR, y: 38 }, thickness: 0.4, color: C.line });
+      pg.drawText(footTxt, { x: (W - fw) / 2, y: 22, size: 8, font: fontReg, color: C.muted });
+    }
 
-    // ─── Serialize ────────────────────────────────────────────────────────
+    // ── Serialize ──────────────────────────────────────────────────────────
     const pdfBytes = await pdfDoc.save();
+    const buf = Buffer.from(pdfBytes);
 
-    const safeTitle = (report.title || "rapor")
+    const safeTitle = (report.title ?? "rapor")
       .replace(/[^\w\s-]/g, "")
       .trim()
       .replace(/\s+/g, "-")
       .slice(0, 60);
 
-    return new NextResponse(Buffer.from(pdfBytes) as unknown as BodyInit, {
+    return new NextResponse(buf as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="rapor-${safeTitle}.pdf"`,
-        "Content-Length": String(pdfBytes.length),
+        "Content-Length": String(buf.length),
       },
     });
   } catch (error) {
-    console.error("PDF generation failed:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("PDF generation failed:", msg, error);
     return NextResponse.json(
-      { error: "PDF oluşturulurken hata meydana geldi." },
+      { error: "PDF oluşturulurken hata meydana geldi.", detail: msg },
       { status: 500 }
     );
   }

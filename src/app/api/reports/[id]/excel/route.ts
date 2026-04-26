@@ -5,51 +5,83 @@ import ExcelJS from "exceljs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// ─── Brand colours (ARGB hex for ExcelJS) ─────────────────────────────────
-const BRAND = {
-  violet:       "FF8B5CF6",
-  violetDark:   "FF6D28D9",
-  violetLight:  "FFF5F3FF",
-  bgDark:       "FF18181B",
-  bgCard:       "FF27272A",
-  heading:      "FFF0F0F5",
-  muted:        "FF71717A",
-  white:        "FFFFFFFF",
-  borderLine:   "FF3F3F46",
-  success:      "FF22C55E",
-  successLight: "FFD1FAE5",
-  warning:      "FFF59E0B",
-  warningLight: "FFFEF3C7",
-  blue:         "FF60A5FA",
-  blueLight:    "FFDBEAFE",
-  red:          "FFEF4444",
-  redLight:     "FFFEE2E2",
-  gray:         "FF9CA3AF",
-  grayLight:    "FFF3F4F6",
+// ── Corporate colour palette (ARGB) ────────────────────────────────────────
+const P = {
+  // Brand / Navy
+  navyDark:   "FF1E2D5A",   // darkest navy header
+  navy:       "FF2E4080",   // section headers
+  navyLight:  "FF3D55B0",   // accent
+  navyBg:     "FFE8EDF8",   // light navy background for alternating rows
+
+  // Greys
+  white:      "FFFFFFFF",
+  rowAlt:     "FFF7F8FB",   // very light grey for alternating
+  headerBg:   "FFF0F3FA",   // column header bg (light)
+  border:     "FFD0D7E8",   // subtle border
+  dark:       "FF1A1A2E",
+  bodyText:   "FF2D3748",
+  mutedText:  "FF718096",
+
+  // Semantic
+  violet:     "FF6D5ACD",
+  green:      "FF1A7F4B",
+  greenBg:    "FFE6F4ED",
+  blue:       "FF1A56A8",
+  blueBg:     "FFE8F0FD",
+  amber:      "FFB45309",
+  amberBg:    "FFFEF3C7",
+  gray:       "FF6B7280",
+  grayBg:     "FFF3F4F6",
+  red:        "FFB91C1C",
+  redBg:      "FFFEE2E2",
 };
 
-const KIND_META: Record<string, { label: string; fgColor: string; bgColor: string }> = {
-  LEAD:          { label: "FIDAN",         fgColor: BRAND.violet,  bgColor: BRAND.violetLight },
-  OPPORTUNITY:   { label: "FIRSAT",        fgColor: "FF059669",    bgColor: BRAND.successLight },
-  NEWS:          { label: "HABER",         fgColor: "FF2563EB",    bgColor: BRAND.blueLight },
-  MARKET_SIGNAL: { label: "PİYASA",        fgColor: "FFD97706",    bgColor: BRAND.warningLight },
-  SYSTEM:        { label: "SİSTEM",        fgColor: "FF6B7280",    bgColor: BRAND.grayLight },
+const KIND_STYLE: Record<string, { fg: string; bg: string; label: string }> = {
+  LEAD:          { fg: P.violet,  bg: "FFE9E5FF", label: "Fırsat Lideri" },
+  OPPORTUNITY:   { fg: P.green,   bg: P.greenBg,  label: "Fırsat"        },
+  NEWS:          { fg: P.blue,    bg: P.blueBg,   label: "Haber"         },
+  MARKET_SIGNAL: { fg: P.amber,   bg: P.amberBg,  label: "Piyasa Sinyali"},
+  SYSTEM:        { fg: P.gray,    bg: P.grayBg,   label: "Sistem"        },
 };
 
-function kindMeta(kind: string) {
-  return KIND_META[kind] ?? { label: kind, fgColor: BRAND.gray, bgColor: BRAND.grayLight };
+function kind(k: string) {
+  return KIND_STYLE[k] ?? { fg: P.gray, bg: P.grayBg, label: k };
 }
 
-function applyBorder(cell: ExcelJS.Cell) {
+function border(cell: ExcelJS.Cell, style: ExcelJS.BorderStyle = "thin") {
   cell.border = {
-    top:    { style: "thin", color: { argb: BRAND.borderLine } },
-    left:   { style: "thin", color: { argb: BRAND.borderLine } },
-    bottom: { style: "thin", color: { argb: BRAND.borderLine } },
-    right:  { style: "thin", color: { argb: BRAND.borderLine } },
+    top:    { style, color: { argb: P.border } },
+    bottom: { style, color: { argb: P.border } },
+    left:   { style, color: { argb: P.border } },
+    right:  { style, color: { argb: P.border } },
   };
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+function fill(cell: ExcelJS.Cell, argb: string) {
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
+}
+
+function font(
+  cell: ExcelJS.Cell,
+  opts: { bold?: boolean; size?: number; color?: string; italic?: boolean; name?: string }
+) {
+  cell.font = {
+    name:   opts.name   ?? "Calibri",
+    size:   opts.size   ?? 10,
+    bold:   opts.bold   ?? false,
+    italic: opts.italic ?? false,
+    color:  { argb: opts.color ?? P.bodyText },
+  };
+}
+
+function align(cell: ExcelJS.Cell, h: ExcelJS.Alignment["horizontal"] = "left", wrap = true) {
+  cell.alignment = { horizontal: h, vertical: "middle", wrapText: wrap };
+}
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await context.params;
 
@@ -65,192 +97,233 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Rapor bulunamadı." }, { status: 404 });
     }
 
+    const dateStr = report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
+
     const wb = new ExcelJS.Workbook();
     wb.creator  = "Uptexx Research Automation";
     wb.created  = new Date();
     wb.modified = new Date();
 
     // ════════════════════════════════════════════════════════════════════════
-    // SHEET 1 — ÖZET (Summary)
+    // SHEET 1 — RAPOR ÖZETİ
     // ════════════════════════════════════════════════════════════════════════
-    const ws1 = wb.addWorksheet("Özet", {
-      pageSetup: { paperSize: 9, orientation: "portrait" },
+    const ws = wb.addWorksheet("Rapor Özeti", {
+      pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1 },
       views: [{ showGridLines: false }],
+      properties: { tabColor: { argb: P.navyDark } },
     });
 
-    ws1.columns = [
-      { key: "label", width: 24 },
-      { key: "value", width: 72 },
+    ws.columns = [
+      { key: "a", width: 26 },
+      { key: "b", width: 70 },
     ];
 
-    // ── Brand header row ──
-    ws1.mergeCells("A1:B1");
-    const headerCell = ws1.getCell("A1");
-    headerCell.value  = "UPTEXX RESEARCH AUTOMATION";
-    headerCell.font   = { name: "Calibri", bold: true, size: 16, color: { argb: BRAND.white } };
-    headerCell.fill   = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.violetDark } };
-    headerCell.alignment = { vertical: "middle", horizontal: "center" };
-    ws1.getRow(1).height = 40;
+    // ── Row 1: Company banner ─────────────────────────────────────────────
+    ws.mergeCells("A1:B1");
+    const bannerCell = ws.getCell("A1");
+    bannerCell.value = "UPTEXX RESEARCH AUTOMATION";
+    fill(bannerCell, P.navyDark);
+    font(bannerCell, { bold: true, size: 18, color: P.white, name: "Calibri" });
+    align(bannerCell, "center", false);
+    ws.getRow(1).height = 46;
 
-    // ── Subtitle row ──
-    ws1.mergeCells("A2:B2");
-    const subCell = ws1.getCell("A2");
+    // ── Row 2: Report subtitle ────────────────────────────────────────────
+    ws.mergeCells("A2:B2");
+    const subCell = ws.getCell("A2");
     subCell.value = "Araştırma Raporu";
-    subCell.font  = { name: "Calibri", size: 11, italic: true, color: { argb: BRAND.muted } };
-    subCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.bgDark } };
-    subCell.alignment = { horizontal: "center", vertical: "middle" };
-    ws1.getRow(2).height = 22;
+    fill(subCell, P.navy);
+    font(subCell, { italic: true, size: 11, color: "FFD0D9F0" });
+    align(subCell, "center", false);
+    ws.getRow(2).height = 26;
 
-    // blank separator
-    ws1.addRow([]);
+    // ── Row 3: blank ─────────────────────────────────────────────────────
+    ws.addRow([]);
+    ws.getRow(3).height = 8;
 
-    // ── Meta table ──
+    // ── Row 4: "RAPOR BİLGİLERİ" section heading ─────────────────────────
+    ws.mergeCells("A4:B4");
+    const metaHead = ws.getCell("A4");
+    metaHead.value = "RAPOR BİLGİLERİ";
+    fill(metaHead, P.navyBg);
+    font(metaHead, { bold: true, size: 9, color: P.navyDark });
+    metaHead.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    border(metaHead, "thin");
+    ws.getRow(4).height = 20;
+
+    // ── Rows 5-8: Meta key-value table ────────────────────────────────────
     const metaRows = [
       { label: "Rapor Başlığı", value: report.title },
-      { label: "Ajan",          value: report.agent.name },
-      { label: "Tarih",         value: report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }) },
-      { label: "Bulgu Sayısı",  value: report.findings.length },
+      { label: "Araştırma Ajanı", value: report.agent.name },
+      { label: "Oluşturulma Tarihi", value: dateStr },
+      { label: "Toplam Bulgu Sayısı", value: report.findings.length },
     ];
 
-    metaRows.forEach((mr, idx) => {
-      const row = ws1.addRow([mr.label, mr.value]);
+    metaRows.forEach(({ label, value }, i) => {
+      const row = ws.addRow([label, value]);
+      const isAlt = i % 2 === 0;
       row.height = 22;
 
-      const labelCell = row.getCell(1);
-      labelCell.font  = { name: "Calibri", bold: true, size: 11, color: { argb: BRAND.white } };
-      labelCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: idx % 2 === 0 ? BRAND.bgDark : BRAND.bgCard } };
-      labelCell.alignment = { vertical: "middle", wrapText: true };
-      applyBorder(labelCell);
+      const la = row.getCell(1);
+      fill(la, isAlt ? P.navyBg : P.white);
+      font(la, { bold: true, size: 10, color: P.navyDark });
+      la.alignment = { horizontal: "left", vertical: "middle", indent: 1, wrapText: false };
+      border(la);
 
-      const valCell = row.getCell(2);
-      valCell.font  = { name: "Calibri", size: 11, color: { argb: BRAND.heading } };
-      valCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: idx % 2 === 0 ? BRAND.bgDark : BRAND.bgCard } };
-      valCell.alignment = { vertical: "middle", wrapText: true };
-      applyBorder(valCell);
+      const va = row.getCell(2);
+      fill(va, isAlt ? P.navyBg : P.white);
+      font(va, { size: 10, color: P.bodyText });
+      va.alignment = { horizontal: "left", vertical: "middle", indent: 1, wrapText: true };
+      border(va);
     });
 
-    // blank
-    ws1.addRow([]);
+    // ── Blank row ─────────────────────────────────────────────────────────
+    ws.addRow([]);
+    ws.getRow(ws.lastRow!.number).height = 10;
 
-    // ── Summary text header ──
-    const ozRow = ws1.addRow(["ÖZET", ""]);
-    ws1.mergeCells(`A${ozRow.number}:B${ozRow.number}`);
-    const ozCell = ws1.getCell(`A${ozRow.number}`);
-    ozCell.value = "ÖZET";
-    ozCell.font  = { name: "Calibri", bold: true, size: 12, color: { argb: BRAND.violet } };
-    ozCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.bgDark } };
-    ozCell.alignment = { horizontal: "left", vertical: "middle" };
-    ozRow.height = 26;
-    applyBorder(ozCell);
+    // ── "ÖZET" section heading ────────────────────────────────────────────
+    ws.mergeCells(`A${ws.lastRow!.number + 1}:B${ws.lastRow!.number + 1}`);
+    const sumHead = ws.getCell(`A${ws.lastRow!.number}`);
+    sumHead.value = "ÖZET";
+    fill(sumHead, P.navyBg);
+    font(sumHead, { bold: true, size: 9, color: P.navyDark });
+    sumHead.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    border(sumHead, "thin");
+    ws.getRow(Number(sumHead.row)).height = 20;
 
-    // summary body
-    const sumRow = ws1.addRow(["", report.summary || "Özet bulunamadı."]);
-    ws1.mergeCells(`A${sumRow.number}:B${sumRow.number}`);
-    const sumCell = ws1.getCell(`A${sumRow.number}`);
-    sumCell.value = report.summary || "Özet bulunamadı.";
-    sumCell.font  = { name: "Calibri", size: 11, color: { argb: BRAND.heading } };
-    sumCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.bgCard } };
-    sumCell.alignment = { wrapText: true, vertical: "top" };
-    applyBorder(sumCell);
-    sumRow.height = Math.max(60, Math.min(240, (report.summary?.length ?? 0) / 3));
+    // ── Summary body ──────────────────────────────────────────────────────
+    ws.mergeCells(`A${ws.lastRow!.number + 1}:B${ws.lastRow!.number + 1}`);
+    const sumBody = ws.getCell(`A${ws.lastRow!.number}`);
+    sumBody.value = report.summary ?? "Özet bulunamadı.";
+    fill(sumBody, P.white);
+    font(sumBody, { size: 10, color: P.bodyText });
+    sumBody.alignment = { horizontal: "left", vertical: "top", wrapText: true, indent: 1 };
+    border(sumBody);
+    ws.getRow(Number(sumBody.row)).height = Math.max(50, Math.min(200, (report.summary?.length ?? 0) / 2.5));
 
     // ════════════════════════════════════════════════════════════════════════
-    // SHEET 2 — BULGULAR (Findings)
+    // SHEET 2 — BULGULAR
     // ════════════════════════════════════════════════════════════════════════
     const ws2 = wb.addWorksheet("Bulgular", {
       pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1 },
-      views: [{ showGridLines: false }],
+      views: [{ state: "frozen", xSplit: 0, ySplit: 3, showGridLines: false }],
+      properties: { tabColor: { argb: P.navyLight } },
     });
 
     ws2.columns = [
-      { key: "no",       width: 5  },
-      { key: "kind",     width: 14 },
-      { key: "score",    width: 8  },
-      { key: "title",    width: 42 },
-      { key: "body",     width: 72 },
-      { key: "source",   width: 40 },
+      { key: "no",      width: 5   },
+      { key: "kind",    width: 16  },
+      { key: "title",   width: 46  },
+      { key: "body",    width: 80  },
+      { key: "source",  width: 42  },
+      { key: "score",   width: 8   },
     ];
 
-    // ── Sheet header ──
+    // ── Row 1: Sheet title ────────────────────────────────────────────────
     ws2.mergeCells("A1:F1");
-    const f1 = ws2.getCell("A1");
-    f1.value = `BULGULAR — ${report.title}`;
-    f1.font  = { name: "Calibri", bold: true, size: 14, color: { argb: BRAND.white } };
-    f1.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.violetDark } };
-    f1.alignment = { horizontal: "center", vertical: "middle" };
-    ws2.getRow(1).height = 36;
+    const sh2title = ws2.getCell("A1");
+    sh2title.value = `BULGULAR — ${report.title}`;
+    fill(sh2title, P.navyDark);
+    font(sh2title, { bold: true, size: 13, color: P.white });
+    align(sh2title, "center", false);
+    ws2.getRow(1).height = 34;
 
-    // ── Column headers ──
-    const colHeaders = ["#", "TÜR", "SKOR", "BAŞLIK", "İÇERİK", "KAYNAK"];
-    const colHeaderRow = ws2.addRow(colHeaders);
-    colHeaderRow.height = 24;
-    colHeaderRow.eachCell((cell) => {
-      cell.font  = { name: "Calibri", bold: true, size: 10, color: { argb: BRAND.white } };
-      cell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.bgDark } };
-      cell.alignment = { horizontal: "center", vertical: "middle" };
-      applyBorder(cell);
+    // ── Row 2: Sub-header (meta) ──────────────────────────────────────────
+    ws2.mergeCells("A2:F2");
+    const sh2meta = ws2.getCell("A2");
+    sh2meta.value = `${report.agent.name}  ·  ${dateStr}  ·  Toplam ${report.findings.length} bulgu`;
+    fill(sh2meta, P.navy);
+    font(sh2meta, { italic: true, size: 9, color: "FFD0D9F0" });
+    align(sh2meta, "center", false);
+    ws2.getRow(2).height = 20;
+
+    // ── Row 3: Column headers ─────────────────────────────────────────────
+    const colHeaders = ["#", "TÜR / KATEGORİ", "BAŞLIK", "İÇERİK / DETAY", "KAYNAK BAĞLANTI", "SKOR"];
+    const headerRow = ws2.addRow(colHeaders);
+    headerRow.height = 28;
+    headerRow.eachCell((cell, col) => {
+      fill(cell, P.navyBg);
+      font(cell, { bold: true, size: 9, color: P.navyDark });
+      align(cell, col === 1 || col === 6 ? "center" : "left", false);
+      cell.border = {
+        top:    { style: "medium", color: { argb: P.navy } },
+        bottom: { style: "medium", color: { argb: P.navy } },
+        left:   { style: "thin",   color: { argb: P.border } },
+        right:  { style: "thin",   color: { argb: P.border } },
+      };
     });
 
-    // ── Data rows ──
-    report.findings.forEach((finding, i) => {
-      const km = kindMeta(finding.kind);
-      const row = ws2.addRow([
+    // ── Data rows ─────────────────────────────────────────────────────────
+    report.findings.forEach((f, i) => {
+      const km      = kind(f.kind);
+      const isAlt   = i % 2 === 0;
+      const rowBg   = isAlt ? P.white : P.rowAlt;
+      const bodyTxt = f.body ?? "";
+      const rowH    = Math.max(40, Math.min(160, bodyTxt.length / 3.5 + 24));
+
+      const dataRow = ws2.addRow([
         i + 1,
         km.label,
-        finding.score ?? "—",
-        finding.title,
-        finding.body,
-        finding.sourceUrl ?? "",
+        f.title ?? "",
+        bodyTxt,
+        f.sourceUrl ?? "",
+        f.score ?? "",
       ]);
+      dataRow.height = rowH;
 
-      row.height = Math.max(32, Math.min(120, (finding.body?.length ?? 0) / 4 + 24));
+      dataRow.eachCell((cell, col) => {
+        fill(cell, rowBg);
+        font(cell, { size: 10, color: P.bodyText });
+        align(cell, "left");
+        border(cell);
 
-      row.eachCell((cell, colNum) => {
-        const isEven = i % 2 === 0;
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: isEven ? BRAND.bgCard : BRAND.bgDark } };
-        cell.font = { name: "Calibri", size: 10, color: { argb: BRAND.heading } };
-        cell.alignment = { wrapText: true, vertical: "top" };
-        applyBorder(cell);
-
-        // index — centered
-        if (colNum === 1) {
-          cell.font = { name: "Calibri", bold: true, size: 10, color: { argb: BRAND.violet } };
-          cell.alignment = { horizontal: "center", vertical: "middle" };
+        // #
+        if (col === 1) {
+          font(cell, { bold: true, size: 10, color: P.navyDark });
+          align(cell, "center", false);
         }
 
-        // kind — colored pill style
-        if (colNum === 2) {
-          cell.font = { name: "Calibri", bold: true, size: 9, color: { argb: km.fgColor } };
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: km.bgColor + "44" } };
-          cell.alignment = { horizontal: "center", vertical: "middle" };
+        // Kind badge
+        if (col === 2) {
+          fill(cell, km.bg);
+          font(cell, { bold: true, size: 9, color: km.fg });
+          align(cell, "center", false);
         }
 
-        // score — centered
-        if (colNum === 3) {
-          cell.alignment = { horizontal: "center", vertical: "top" };
-          cell.font = { name: "Calibri", size: 10, color: { argb: BRAND.warning } };
+        // Title
+        if (col === 3) {
+          font(cell, { bold: true, size: 10, color: P.navyDark });
         }
 
-        // title — bold
-        if (colNum === 4) {
-          cell.font = { name: "Calibri", bold: true, size: 10, color: { argb: BRAND.heading } };
+        // Source hyperlink
+        if (col === 5 && f.sourceUrl) {
+          cell.value = { text: f.sourceUrl, hyperlink: f.sourceUrl };
+          font(cell, { size: 9, color: P.blue });
+          cell.font!.underline = true;
         }
 
-        // source — hyperlink style
-        if (colNum === 6 && finding.sourceUrl) {
-          cell.font = { name: "Calibri", size: 9, color: { argb: BRAND.blue }, underline: true };
-          cell.value = { text: finding.sourceUrl, hyperlink: finding.sourceUrl };
+        // Score
+        if (col === 6) {
+          font(cell, { bold: true, size: 10, color: f.score != null ? P.amber : P.mutedText });
+          align(cell, "center", false);
         }
       });
     });
 
-    // ─── Freeze header rows ────────────────────────────────────────────────
-    ws2.views = [{ state: "frozen", xSplit: 0, ySplit: 2, showGridLines: false }];
+    // ── Add totals/summary row ────────────────────────────────────────────
+    ws2.addRow([]);
+    const totalRow = ws2.addRow([`Toplam: ${report.findings.length} bulgu`, "", "", "", "", ""]);
+    ws2.mergeCells(`A${totalRow.number}:F${totalRow.number}`);
+    const totalCell = ws2.getCell(`A${totalRow.number}`);
+    fill(totalCell, P.navyBg);
+    font(totalCell, { bold: true, size: 9, color: P.navyDark });
+    totalCell.alignment = { horizontal: "right", vertical: "middle", indent: 1 };
+    totalRow.height = 22;
+    border(totalCell);
 
-    // ─── Serialize ─────────────────────────────────────────────────────────
+    // ─── Serialize ────────────────────────────────────────────────────────
     const buf = Buffer.from(await wb.xlsx.writeBuffer());
 
-    const safeTitle = (report.title || "rapor")
+    const safeTitle = (report.title ?? "rapor")
       .replace(/[^\w\s-]/g, "")
       .trim()
       .replace(/\s+/g, "-")
@@ -265,9 +338,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       },
     });
   } catch (error) {
-    console.error("Excel generation failed:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Excel generation failed:", msg, error);
     return NextResponse.json(
-      { error: "Excel oluşturulurken hata meydana geldi." },
+      { error: "Excel oluşturulurken hata meydana geldi.", detail: msg },
       { status: 500 }
     );
   }
