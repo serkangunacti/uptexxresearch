@@ -92,6 +92,12 @@ export async function GET(
     const fontReg  = await pdfDoc.embedFont(fs.readFileSync(path.join(fontsDir, "Roboto-Regular.ttf")));
     const fontBold = await pdfDoc.embedFont(fs.readFileSync(path.join(fontsDir, "Roboto-Bold.ttf")));
 
+    // Embed Logo
+    const logoPath = path.join(process.cwd(), "public", "uptexx-logo.png");
+    const logoBytes = fs.readFileSync(logoPath);
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const logoDims = logoImage.scale(0.035);
+
     pdfDoc.setTitle(report.title ?? "Rapor");
     pdfDoc.setAuthor("Uptexx Research Automation");
     pdfDoc.setCreationDate(new Date());
@@ -147,9 +153,16 @@ export async function GET(
     // thin accent stripe below band
     rect(0, H - bandH - 2, W, 2, C.accent);
 
-    // Company name — top left
-    page.drawText("UPTEXX RESEARCH AUTOMATION", {
-      x: ML, y: H - 28, size: 8, font: fontBold, color: C.light,
+    // Logo and Company name
+    page.drawImage(logoImage, {
+      x: ML,
+      y: H - 34,
+      width: logoDims.width,
+      height: logoDims.height,
+    });
+
+    page.drawText("RESEARCH AUTOMATION", {
+      x: ML + logoDims.width + 8, y: H - 28, size: 7.5, font: fontBold, color: C.light,
     });
 
     // Report title — left-aligned, wrapped
