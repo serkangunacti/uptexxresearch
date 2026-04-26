@@ -1132,3 +1132,211 @@ img { display: block; max-width: 100%; }
   opacity: .4;
   cursor: not-allowed;
 }
+
+/* === Confirm Modal === */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn .15s var(--ease) both;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(239,68,68,.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn .2s var(--ease) both;
+}
+
+.modal-icon {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--danger-dim);
+  border: 1px solid rgba(239,68,68,.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.modal-icon svg {
+  width: 26px; height: 26px;
+  stroke: var(--danger);
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.modal-message {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.modal-message strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.modal-warning {
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 6px;
+  display: block;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.modal-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all .2s var(--ease);
+}
+
+.modal-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.modal-btn-cancel {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.modal-btn-cancel:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.modal-btn-confirm {
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  color: #fff;
+}
+
+.modal-btn-confirm:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.modal-btn-confirm:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+.modal-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: inline-block;
+}
+
+/* === Report Read / Unread === */
+.report-unread .run-agent {
+  color: var(--accent-light);
+}
+
+.report-title-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.report-title-unread {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.unread-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  display: inline-block;
+  box-shadow: 0 0 6px rgba(139,92,246,.5);
+}
+
+.read-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.report-read .run-agent {
+  color: var(--text-muted);
+}
+
+/* === Excel Button === */
+.btn-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  text-decoration: none;
+}
+
+.btn-excel:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(22,163,74,.3);
+}
+
+.btn-excel:active {
+  transform: scale(.97);
+}
+

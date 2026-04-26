@@ -18,12 +18,12 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="report-detail">
-      <Link href="/" className="back-link">
+      <Link href="/reports" className="back-link">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="19" y1="12" x2="5" y2="12" />
           <polyline points="12,19 5,12 12,5" />
         </svg>
-        Dashboard'a dön
+        Raporlara dön
       </Link>
 
       <header className="report-page-header">
@@ -35,16 +35,33 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <p className="report-summary-text">{report.summary}</p>
 
       <div className="report-actions">
-        <a href={`/api/reports/${report.id}/download`} className="btn-primary">
+        {/* PDF Görüntüle — opens in new browser tab */}
+        <a
+          href={`/api/reports/${report.id}/download`}
+          className="btn-primary"
+          target="_blank"
+          rel="noreferrer"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-            <polyline points="7,10 12,15 17,10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+            <line x1="9" y1="11" x2="15" y2="11" />
           </svg>
-          PDF İndir
+          PDF Görüntüle
         </a>
-        <a href={report.publicUrl} className="btn-outline" target="_blank" rel="noreferrer">
-          Public Link
+
+        {/* Excel Oluştur — triggers download */}
+        <a
+          href={`/api/reports/${report.id}/excel`}
+          className="btn-excel"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 21V9" />
+            <path d="m6 13 2 4 2-4M14 13h4M14 17h4" />
+          </svg>
+          Excel Oluştur
         </a>
       </div>
 

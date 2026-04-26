@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { DeleteRunButton } from "../DeleteRunButton";
+import { ConfirmModal } from "../ConfirmModal";
 
 type RunWithAgent = {
   id: string;
@@ -15,6 +16,7 @@ export function RunListClient({ runs }: { runs: RunWithAgent[] }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === runs.length) {
@@ -25,15 +27,17 @@ export function RunListClient({ runs }: { runs: RunWithAgent[] }) {
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => 
+    setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteRequest = () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`${selectedIds.length} adet geçmiş kaydını silmek istediğinize emin misiniz?`)) return;
+    setShowModal(true);
+  };
 
+  const handleConfirmDelete = useCallback(async () => {
     setIsDeleting(true);
     try {
       const res = await fetch("/api/runs/bulk-delete", {
@@ -41,9 +45,10 @@ export function RunListClient({ runs }: { runs: RunWithAgent[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
       });
-      
+
       if (res.ok) {
         setSelectedIds([]);
+        setShowModal(false);
         router.refresh();
       } else {
         alert("Toplu silme işleminde hata oluştu.");
@@ -54,28 +59,41 @@ export function RunListClient({ runs }: { runs: RunWithAgent[] }) {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [selectedIds, router]);
+
+  const handleCancelDelete = useCallback(() => {
+    if (!isDeleting) setShowModal(false);
+  }, [isDeleting]);
 
   return (
     <>
+      <ConfirmModal
+        isOpen={showModal}
+        count={selectedIds.length}
+        entityLabel="çalışma kaydını"
+        isDeleting={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
+
       <div className="list-controls">
         <label className="checkbox-label">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             checked={runs.length > 0 && selectedIds.length === runs.length}
             onChange={toggleSelectAll}
             disabled={runs.length === 0 || isDeleting}
           />
           <span className="checkbox-text">Tümünü Seç</span>
         </label>
-        
+
         {selectedIds.length > 0 && (
-          <button 
-            className="bulk-delete-btn" 
-            onClick={handleBulkDelete}
+          <button
+            className="bulk-delete-btn"
+            onClick={handleBulkDeleteRequest}
             disabled={isDeleting}
           >
-            {isDeleting ? "Siliniyor..." : `Seçilenleri Sil (${selectedIds.length})`}
+            Seçilenleri Sil ({selectedIds.length})
           </button>
         )}
       </div>
@@ -91,8 +109,8 @@ export function RunListClient({ runs }: { runs: RunWithAgent[] }) {
           runs.map((run) => (
             <div className="run-item" key={run.id}>
               <div className="run-checkbox">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={selectedIds.includes(run.id)}
                   onChange={() => toggleSelect(run.id)}
                   disabled={isDeleting}
