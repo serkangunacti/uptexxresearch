@@ -90,13 +90,13 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={`sidebar ${mobileOpen ? "open" : ""}`}>
-        <div className="sidebar-brand">
-          <div className="brand-icon">U</div>
+        <Link href="/" className="sidebar-brand">
+          <img src="/uptexx-logo.png" alt="Uptexx" className="brand-logo" />
           <div className="brand-text">
             <h2>UPTEXX</h2>
             <p>Research Automation</p>
           </div>
-        </div>
+        </Link>
 
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menü</div>

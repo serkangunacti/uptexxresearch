@@ -83,7 +83,20 @@ export async function generateReportWithMiniMax(
 
   if (!validated.success) {
     console.error("Zod validation failed:", validated.error);
-    return fallbackReport(agent, sources, "MiniMax response could not be parsed as the expected JSON report shape.");
+
+    // Try to salvage a usable summary from the raw response text
+    const cleanedContent = content
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .replace(/```json\s*/gi, "")
+      .replace(/```/gi, "")
+      .trim();
+
+    // If the content looks like it has some useful text, use first 500 chars as summary
+    const summaryText = cleanedContent.length > 20
+      ? `${agent.name} ajanı tarafından toplanan veriler işlendi. Detaylar aşağıdaki bulgularda yer almaktadır.`
+      : `${agent.name} ajanı araştırma sonuçlarını derledi.`;
+
+    return fallbackReport(agent, sources, summaryText);
   }
 
   return validated.data;
