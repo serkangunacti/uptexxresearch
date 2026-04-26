@@ -153,16 +153,9 @@ export async function GET(
     // thin accent stripe below band
     rect(0, H - bandH - 2, W, 2, C.accent);
 
-    // Logo and Company name
-    page.drawImage(logoImage, {
-      x: ML,
-      y: H - 34,
-      width: logoDims.width,
-      height: logoDims.height,
-    });
-
-    page.drawText("RESEARCH AUTOMATION", {
-      x: ML + logoDims.width + 8, y: H - 28, size: 7.5, font: fontBold, color: C.light,
+    // Company name — top left
+    page.drawText("UPTEXX RESEARCH AUTOMATION", {
+      x: ML, y: H - 28, size: 8, font: fontBold, color: C.light,
     });
 
     // Report title — left-aligned, wrapped
@@ -298,9 +291,16 @@ export async function GET(
         color: C.divider,
       });
 
-      // left: company
+      // left: logo and company
+      pg.drawImage(logoImage, {
+        x: ML,
+        y: 20,
+        width: logoDims.width * 0.8,
+        height: logoDims.height * 0.8,
+      });
+
       pg.drawText("Uptexx Research Automation", {
-        x: ML, y: 28, size: 7.5, font: fontReg, color: C.muted,
+        x: ML + (logoDims.width * 0.8) + 8, y: 28, size: 7.5, font: fontReg, color: C.muted,
       });
 
       // right: page number
