@@ -15,23 +15,23 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const normalizedInput = username.trim().toLowerCase();
-    // Hem prefix'i hem de tam maili tek bir mantıkla kapsıyoruz
-    const userWithoutDomain = normalizedInput.split("@")[0];
-    const isCorrectUser = userWithoutDomain === "serkangunacti";
-    const isCorrectPass = password === "Trabzon61!";
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (isCorrectUser && isCorrectPass) {
-      // Set a simple cookie for authentication
-      document.cookie = "uptexx_auth=true; path=/; max-age=86400; SameSite=Lax";
-      
-      // Small delay to ensure cookie is set before redirect
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 100);
-    } else {
-      setError("Giriş bilgileri hatalı. Lütfen kontrol ediniz.");
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = "/";
+      } else {
+        setError(data.error || "Giriş bilgileri hatalı.");
+        setLoading(false);
+      }
+    } catch (err) {
+      setError("Bağlantı hatası oluştu.");
       setLoading(false);
     }
   };
