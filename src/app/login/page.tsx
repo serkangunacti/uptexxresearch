@@ -17,7 +17,7 @@ export default function LoginPage() {
 
     const normalizedInput = username.trim().toLowerCase();
     const isCorrectUser = normalizedInput === "serkangunacti" || normalizedInput === "serkangunacti@kuzeytakip.com";
-    const isCorrectPass = password === "172561";
+    const isCorrectPass = password === "Trabzon61!";
 
     if (isCorrectUser && isCorrectPass) {
       // Set a simple cookie for authentication
