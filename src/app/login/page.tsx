@@ -16,7 +16,9 @@ export default function LoginPage() {
     setLoading(true);
 
     const normalizedInput = username.trim().toLowerCase();
-    const isCorrectUser = normalizedInput === "serkangunacti" || normalizedInput === "serkangunacti@kuzeytakip.com";
+    // Hem prefix'i hem de tam maili tek bir mantıkla kapsıyoruz
+    const userWithoutDomain = normalizedInput.split("@")[0];
+    const isCorrectUser = userWithoutDomain === "serkangunacti";
     const isCorrectPass = password === "Trabzon61!";
 
     if (isCorrectUser && isCorrectPass) {
