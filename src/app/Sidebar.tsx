@@ -135,6 +135,20 @@ export function Sidebar() {
             PostgreSQL
           </div>
           <p className="sidebar-version">v0.1.0 · Uptexx</p>
+          <button 
+            onClick={() => {
+              document.cookie = "uptexx_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+              window.location.href = "/login";
+            }}
+            className="logout-button"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Oturumu Kapat
+          </button>
         </div>
       </aside>
     </>
