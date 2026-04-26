@@ -16,7 +16,7 @@ export async function GET() {
       select: { id: true, agentId: true, status: true, createdAt: true }
     });
 
-    const agentCount = await prisma.agentDefinition.count();
+    const agentCount = await prisma.agent.count();
 
     return NextResponse.json({
       connected_to: maskedUrl,
