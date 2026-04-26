@@ -15,23 +15,21 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    // Hardcoded credentials as requested
-    const validUser = "serkangunacti@kuzeytakip.com";
-    const validPrefix = "serkangunacti";
-    const validPass = "172561";
+    const normalizedInput = username.trim().toLowerCase();
+    const isCorrectUser = normalizedInput === "serkangunacti" || normalizedInput === "serkangunacti@kuzeytakip.com";
+    const isCorrectPass = password === "172561";
 
-    const normalizedUsername = username.trim().toLowerCase();
-    
-    if (
-      (normalizedUsername === validUser || normalizedUsername === validPrefix) &&
-      password === validPass
-    ) {
+    if (isCorrectUser && isCorrectPass) {
       // Set a simple cookie for authentication
       document.cookie = "uptexx_auth=true; path=/; max-age=86400; SameSite=Lax";
-      router.push("/");
-      router.refresh();
+      
+      // Small delay to ensure cookie is set before redirect
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 100);
     } else {
-      setError("Geçersiz kullanıcı adı veya şifre.");
+      setError("Giriş bilgileri hatalı. Lütfen kontrol ediniz.");
       setLoading(false);
     }
   };
