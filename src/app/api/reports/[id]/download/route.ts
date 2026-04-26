@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -82,12 +84,21 @@ export async function GET(
 
     // ── Create PDF ─────────────────────────────────────────────────────────
     const pdfDoc = await PDFDocument.create();
-    pdfDoc.setTitle(report.title ?? "Araştırma Raporu");
+
+    // Register fontkit for custom font embedding (Turkish chars: ı ş ğ ç ö ü İ Ş Ğ)
+    const fontkit = (await import("@pdf-lib/fontkit")).default;
+    pdfDoc.registerFontkit(fontkit);
+
+    pdfDoc.setTitle(report.title ?? "Arastirma Raporu");
     pdfDoc.setAuthor("Uptexx Research Automation");
     pdfDoc.setCreationDate(new Date());
 
-    const fontReg  = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // Embed Roboto font (full Latin Extended / Turkish support)
+    const fontsDir = path.join(process.cwd(), "src", "fonts");
+    const regBytes  = fs.readFileSync(path.join(fontsDir, "Roboto-Regular.ttf"));
+    const boldBytes = fs.readFileSync(path.join(fontsDir, "Roboto-Bold.ttf"));
+    const fontReg   = await pdfDoc.embedFont(regBytes);
+    const fontBold  = await pdfDoc.embedFont(boldBytes);
 
     // State that persists across pages
     let currentPage = pdfDoc.addPage([W, H]);
