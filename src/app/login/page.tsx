@@ -40,7 +40,9 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <img src="/uptexx-logo.png" alt="Uptexx" className="login-logo" />
+          <div className="logo-wrapper">
+            <img src="/uptexx-logo.png" alt="Uptexx" className="login-logo" />
+          </div>
           <h1>UPTEXX</h1>
           <p>Araştırma Otomasyonu Giriş</p>
         </div>
@@ -51,7 +53,7 @@ export default function LoginPage() {
             <input
               id="username"
               type="text"
-              placeholder="serkangunacti"
+              placeholder="Kullanıcı adınızı giriniz"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -64,7 +66,7 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
-              placeholder="••••••"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -103,7 +105,7 @@ export default function LoginPage() {
           backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 24px;
-          padding: 40px;
+          padding: 48px 40px;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
@@ -112,19 +114,25 @@ export default function LoginPage() {
           margin-bottom: 32px;
         }
 
+        .logo-wrapper {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
+
         .login-logo {
-          width: 64px;
-          height: 64px;
-          margin-bottom: 16px;
+          width: 72px;
+          height: 72px;
           object-fit: contain;
+          border-radius: 12px;
         }
 
         .login-header h1 {
-          font-size: 24px;
+          font-size: 26px;
           font-weight: 800;
           letter-spacing: 0.1em;
           color: #fff;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
 
         .login-header p {
@@ -135,27 +143,27 @@ export default function LoginPage() {
         .login-form {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 24px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .form-group label {
           font-size: 13px;
           font-weight: 600;
           color: #cbd5e1;
-          margin-left: 4px;
+          margin-left: 2px;
         }
 
         .form-group input {
           background: rgba(15, 23, 42, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
-          padding: 12px 16px;
+          padding: 14px 16px;
           color: #fff;
           font-size: 15px;
           transition: all 0.2s;
@@ -164,15 +172,15 @@ export default function LoginPage() {
         .form-group input:focus {
           outline: none;
           border-color: #6366f1;
-          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
 
         .login-error {
           background: rgba(239, 68, 68, 0.1);
           border: 1px solid rgba(239, 68, 68, 0.2);
           color: #fca5a5;
-          padding: 10px;
-          border-radius: 8px;
+          padding: 12px;
+          border-radius: 10px;
           font-size: 13px;
           text-align: center;
         }
@@ -182,12 +190,12 @@ export default function LoginPage() {
           color: #fff;
           border: none;
           border-radius: 12px;
-          padding: 14px;
+          padding: 16px;
           font-size: 16px;
           font-weight: 700;
           cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
-          margin-top: 10px;
+          transition: all 0.2s;
+          margin-top: 8px;
         }
 
         .login-button:hover {
