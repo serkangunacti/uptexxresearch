@@ -23,7 +23,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  // If authenticated, refresh the cookie to extend the session for another hour (Sliding Session)
+  const response = NextResponse.next();
+  response.cookies.set("uptexx_auth", "true", {
+    path: "/",
+    maxAge: 60 * 60, // Refresh to 1 hour
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+
+  return response;
 }
 
 export const config = {

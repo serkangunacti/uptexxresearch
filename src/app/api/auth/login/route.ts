@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       // Set HTTP-Only, Secure cookie from Server Side
       response.cookies.set("uptexx_auth", "true", {
         path: "/",
-        maxAge: 60 * 60 * 24, // 24 hours
+        maxAge: 60 * 60, // 1 hour
         httpOnly: false, // Middleware needs to read it
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
