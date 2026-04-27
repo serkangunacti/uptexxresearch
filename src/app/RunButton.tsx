@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export function RunButton({ agentId, disabled }: { agentId: string; disabled?: boolean }) {
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "queued" | "error">("idle");
   const router = useRouter();
 
   async function run() {
@@ -12,7 +12,7 @@ export function RunButton({ agentId, disabled }: { agentId: string; disabled?: b
     try {
       const response = await fetch(`/api/agents/${agentId}/run`, { method: "POST" });
       if (response.ok) {
-        setState("done");
+        setState("queued");
         router.refresh(); // Refresh dashboard data immediately
         setTimeout(() => setState("idle"), 3000); // Reset button after 3s
       } else {
@@ -28,14 +28,14 @@ export function RunButton({ agentId, disabled }: { agentId: string; disabled?: b
   const label = {
     idle: "Çalıştır",
     loading: "Araştırılıyor ⏳",
-    done: "Tamamlandı ✓",
+    queued: "Kuyruğa alındı ✓",
     error: "Hata ✗",
   }[state];
 
   return (
     <button
       className={`run-btn ${state}`}
-      disabled={disabled || state === "loading" || state === "done"}
+      disabled={disabled || state === "loading" || state === "queued"}
       onClick={run}
     >
       {state === "loading" && <span className="spinner" />}

@@ -1,6 +1,8 @@
 # Uptexx Research Agent Automation
 
-Araştırma ajanlarını yöneten, raporları Slack'e teslim eden otomasyon paneli.
+Araştırma ajanlarını yöneten, raporları panelde PDF/Excel olarak sunan otomasyon paneli.
+
+> Slack alanları veritabanında hazır tutulur; Slack'e otomatik teslim bu stabilizasyon sürümünde aktif değildir.
 
 **Stack:** Next.js 16 · TypeScript · Prisma · Supabase (PostgreSQL) · Vercel
 
@@ -17,6 +19,18 @@ cp .env.example .env.local
 ```
 
 4. `DATABASE_URL` ve `DIRECT_URL` alanlarını Supabase bilgileriyle doldur
+5. Admin ve job ayarlarını ekle:
+
+```bash
+ADMIN_USERNAME="serkangunacti"
+ADMIN_PASSWORD="guclu-bir-sifre"
+SESSION_SECRET="$(openssl rand -base64 48)"
+CRON_SECRET="$(openssl rand -base64 32)"
+GITHUB_REPO="serkangunacti/uptexxresearch"
+GITHUB_PAT="github-fine-grained-token"
+TAVILY_API_KEY="..."
+TZ="Europe/Istanbul"
+```
 
 ### 2. Veritabanını Hazırla
 
@@ -41,7 +55,19 @@ Panel: [http://localhost:3000](http://localhost:3000)
 3. Environment Variables bölümünde ekle:
    - `DATABASE_URL` — Supabase pooler bağlantısı
    - `DIRECT_URL` — Supabase direkt bağlantısı
+   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` — panel girişi
+   - `CRON_SECRET` — Vercel Cron bearer doğrulaması
+   - `GITHUB_PAT`, `GITHUB_REPO` — agent run workflow dispatch
+   - `TAVILY_API_KEY` — web arama
+   - `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `MINIMAX_MODEL` — rapor üretimi
+   - `TZ=Europe/Istanbul` — ajan çalışma saatleri
 4. Deploy et
+
+### Cron ve Background Runner
+
+Vercel Cron `/api/cron` endpoint'ini saatlik çağırır. Endpoint, zamanı gelen ajanlar için veritabanında `QUEUED` run kaydı açar ve `.github/workflows/agent-runner.yml` workflow'unu tetikler. Uzun süren web arama ve MiniMax rapor üretimi GitHub Actions üzerinde çalışır.
+
+Saatlik cron için Vercel Pro gerekir. Hobby planda cron sıklığını günlük sınıra göre değiştirmen gerekir.
 
 ### Custom Domain
 
@@ -67,3 +93,9 @@ DNS ayarlarında Vercel'in verdiği CNAME kaydını domain sağlayıcına ekle.
 - `POST /api/agents/:id/run` — Ajanı manuel çalıştır
 - `GET /api/reports` — Son raporları listele
 - `GET /api/reports/:id/download` — Rapor PDF indir
+- `GET /api/reports/:id/excel` — Rapor Excel indir
+- `POST /api/auth/login` — Admin girişi
+- `POST /api/auth/logout` — Admin çıkışı
+- `GET /api/cron` — Secret ile çalışan zamanlayıcı endpoint
+
+`/api/health`, `/api/auth/login`, `/api/auth/logout` ve `CRON_SECRET` ile çağrılan `/api/cron` dışındaki API endpoint'leri imzalı admin session cookie ister.

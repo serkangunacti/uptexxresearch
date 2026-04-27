@@ -110,7 +110,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`nav-item ${item.href === "/" && pathname === "/" ? "active" : ""}`}
+                className={`nav-item ${isActive ? "active" : ""}`}
                 onClick={() => setMobileOpen(false)}
               >
                 {item.icon}
@@ -138,7 +138,7 @@ export function Sidebar() {
           <button 
             onClick={async () => {
               try {
-                await fetch("/api/auth/login", { method: "DELETE" });
+                await fetch("/api/auth/logout", { method: "POST" });
               } finally {
                 window.location.href = "/login";
               }

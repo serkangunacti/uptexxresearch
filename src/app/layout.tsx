@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Sidebar } from "./Sidebar";
+import { AppFrame } from "./AppFrame";
 import "./globals.css";
 
 const inter = Inter({
@@ -10,19 +10,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Uptexx Research Automation",
-  description: "Slack PDF teslimatlı araştırma ajanları paneli",
+  description: "PDF ve Excel raporlu araştırma ajanları paneli",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr">
       <body className={inter.className}>
-        <div className="app-layout">
-          <Sidebar />
-          <main className="main-content">
-            {children}
-          </main>
-        </div>
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );

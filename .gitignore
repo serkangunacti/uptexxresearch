@@ -10,6 +10,7 @@ out/
 # Build
 dist/
 build/
+tsconfig.tsbuildinfo
 
 # Environment
 .env

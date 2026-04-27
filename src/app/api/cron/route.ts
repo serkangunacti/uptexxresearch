@@ -2,18 +2,17 @@ import { NextResponse } from "next/server";
 import { ensureAgents } from "@/lib/agents";
 import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
 import { prisma } from "@/lib/db";
-import { executeAgentRun } from "@/lib/runner";
+import { dispatchAgentRun } from "@/lib/github-actions";
 import { RunStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // Vercel Pro: 300s, Hobby: 60s
+export const maxDuration = 60;
 
 // Vercel Cron calls this endpoint on schedule
 export async function GET(request: Request) {
-  // Verify cron secret (optional but recommended)
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +28,6 @@ export async function GET(request: Request) {
     const isDue = await isAgentDue(agentDef.id, agentDef.schedule, now);
     if (!isDue) continue;
 
-    // Create run and execute
     const run = await prisma.agentRun.create({
       data: {
         agentId: agentDef.id,
@@ -39,13 +37,24 @@ export async function GET(request: Request) {
     });
 
     try {
-      await executeAgentRun(agentDef.id, run.id);
-      results.push({ agentId: agentDef.id, status: "SUCCEEDED" });
+      await dispatchAgentRun(agentDef.id, run.id);
+      results.push({ agentId: agentDef.id, status: "QUEUED" });
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await prisma.agentRun.update({
+        where: { id: run.id },
+        data: {
+          status: "FAILED",
+          finishedAt: new Date(),
+          error: message,
+          metadata: { reason: "schedule", error: message },
+        },
+      });
+
       results.push({
         agentId: agentDef.id,
         status: "FAILED",
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       });
     }
   }
