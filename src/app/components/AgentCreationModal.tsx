@@ -62,3 +62,5 @@ export function AgentCreationModal({ isOpen, onClose, onSuccess }: AgentCreation
     </div>
   );
 }
+
+export default AgentCreationModal;
