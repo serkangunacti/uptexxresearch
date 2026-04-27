@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.string().optional().default(""),
   APP_PUBLIC_URL: z.string().url().default("http://localhost:3000"),
   MINIMAX_API_KEY: z.string().optional().default(""),
   MINIMAX_BASE_URL: z.string().url().default("https://api.minimax.io/v1"),

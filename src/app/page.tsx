@@ -9,43 +9,48 @@ import { AutoRefresh } from "./AutoRefresh";
 export const dynamic = "force-dynamic";
 
 async function getDashboardData() {
-  await ensureAgents();
+  try {
+    await ensureAgents();
 
-  // Get agent order from definitions
-  const definitionOrder = AGENT_DEFINITIONS.map((d) => d.id);
+    // Get agent order from definitions
+    const definitionOrder = AGENT_DEFINITIONS.map((d) => d.id);
 
-  const [agentsRaw, reports, runs, succeededCount] = await Promise.all([
-    prisma.agent.findMany({
-      include: {
-        runs: { orderBy: { createdAt: "desc" }, take: 1 },
-        reports: { orderBy: { createdAt: "desc" }, take: 1 },
-      },
-    }),
-    prisma.report.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: { agent: true },
-    }),
-    prisma.agentRun.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: { agent: true },
-    }),
-    prisma.agentRun.count({ where: { status: "SUCCEEDED" } }),
-  ]);
+    const [agentsRaw, reports, runs, succeededCount] = await Promise.all([
+      prisma.agent.findMany({
+        include: {
+          runs: { orderBy: { createdAt: "desc" }, take: 1 },
+          reports: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+      }),
+      prisma.report.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        include: { agent: true },
+      }),
+      prisma.agentRun.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        include: { agent: true },
+      }),
+      prisma.agentRun.count({ where: { status: "SUCCEEDED" } }),
+    ]);
 
-  // Sort agents by definition order (stable)
-  const agents = agentsRaw.sort((a, b) => {
-    const ia = definitionOrder.indexOf(a.id);
-    const ib = definitionOrder.indexOf(b.id);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  });
+    // Sort agents by definition order (stable)
+    const agents = agentsRaw.sort((a, b) => {
+      const ia = definitionOrder.indexOf(a.id);
+      const ib = definitionOrder.indexOf(b.id);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
 
-  return { agents, reports, runs, succeededCount };
+    return { agents, reports, runs, succeededCount, hasError: false };
+  } catch (error) {
+    console.error("Dashboard data load failed:", error);
+    return { agents: [], reports: [], runs: [], succeededCount: 0, hasError: true };
+  }
 }
 
 export default async function Home() {
-  const { agents, reports, runs, succeededCount } = await getDashboardData();
+  const { agents, reports, runs, succeededCount, hasError } = await getDashboardData();
   const activeAgents = agents.filter((a) => a.status === "ACTIVE").length;
   const latestReport = reports[0];
 
@@ -67,6 +72,15 @@ export default async function Home() {
           Research <span>Automation</span>
         </h1>
       </header>
+
+      {hasError ? (
+        <div className="panel" style={{ marginBottom: "24px" }}>
+          <div className="panel-header">
+            <h3>Dashboard verileri yüklenemedi</h3>
+          </div>
+          <p className="empty-state">Veritabanı bağlantısını ve Vercel ortam değişkenlerini kontrol edin.</p>
+        </div>
+      ) : null}
 
       {/* Stats */}
       <div className="stats-grid">
