@@ -3,7 +3,8 @@ import { ensureAgents } from "@/lib/agents";
 import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
 import { prisma } from "@/lib/db";
 import { executeAgentRun } from "@/lib/runner";
-import { RunStatus } from "@prisma/client";
+import { schedulerEngine } from "@/lib/scheduling/scheduler-engine";
+import { runRetentionCleanup } from "@/lib/report-retention";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // Vercel Pro: 300s, Hobby: 60s
@@ -20,64 +21,109 @@ export async function GET(request: Request) {
   await ensureAgents();
 
   const now = new Date();
-  const results: { agentId: string; status: string; error?: string }[] = [];
+  const results: { agentId: string; status: string; error?: string; reason?: string }[] = [];
 
-  for (const agentDef of AGENT_DEFINITIONS) {
-    if (agentDef.status !== "ACTIVE" || !agentDef.schedule) continue;
+  // Get all active agents
+  const agents = await prisma.agent.findMany({
+    where: { status: "ACTIVE" },
+    include: { scheduleConfig: true }
+  });
 
-    // Check if agent is due
-    const isDue = await isAgentDue(agentDef.id, agentDef.schedule, now);
-    if (!isDue) continue;
-
-    // Create run and execute
-    const run = await prisma.agentRun.create({
-      data: {
-        agentId: agentDef.id,
-        status: "QUEUED",
-        metadata: { reason: "schedule" },
-      },
-    });
-
+  for (const agent of agents) {
     try {
-      await executeAgentRun(agentDef.id, run.id);
-      results.push({ agentId: agentDef.id, status: "SUCCEEDED" });
+      // Check if agent should run using new scheduler
+      const scheduleCheck = await schedulerEngine.shouldAgentRun(agent.id, now);
+
+      if (!scheduleCheck.shouldRun) {
+        // Record skipped execution
+        await schedulerEngine.recordExecution(
+          agent.id,
+          now,
+          now,
+          scheduleCheck.reason || "Not scheduled",
+          scheduleCheck.ruleId,
+          "skipped",
+          scheduleCheck.reason
+        );
+        continue;
+      }
+
+      // Create run and execute
+      const run = await prisma.agentRun.create({
+        data: {
+          agentId: agent.id,
+          status: "QUEUED",
+          metadata: {
+            reason: "schedule",
+            ruleId: scheduleCheck.ruleId
+          },
+        },
+      });
+
+      const startTime = new Date();
+      try {
+        await executeAgentRun(agent.id, run.id);
+
+        // Record successful execution
+        await schedulerEngine.recordExecution(
+          agent.id,
+          now,
+          startTime,
+          scheduleCheck.reason || "Scheduled run",
+          scheduleCheck.ruleId,
+          "executed"
+        );
+
+        results.push({
+          agentId: agent.id,
+          status: "SUCCEEDED",
+          reason: scheduleCheck.reason
+        });
+      } catch (error) {
+        // Record failed execution
+        await schedulerEngine.recordExecution(
+          agent.id,
+          now,
+          startTime,
+          scheduleCheck.reason || "Scheduled run",
+          scheduleCheck.ruleId,
+          "failed",
+          error instanceof Error ? error.message : String(error)
+        );
+
+        results.push({
+          agentId: agent.id,
+          status: "FAILED",
+          error: error instanceof Error ? error.message : String(error),
+          reason: scheduleCheck.reason
+        });
+      }
     } catch (error) {
+      console.error(`Error processing agent ${agent.id}:`, error);
       results.push({
-        agentId: agentDef.id,
-        status: "FAILED",
+        agentId: agent.id,
+        status: "ERROR",
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
+  // Run retention cleanup
+  let cleanupResult = null;
+  try {
+    cleanupResult = await runRetentionCleanup();
+  } catch (error) {
+    console.error("Retention cleanup error:", error);
+  }
+
   return NextResponse.json({
     ok: true,
     timestamp: now.toISOString(),
-    executed: results.length,
+    executed: results.filter(r => r.status === "SUCCEEDED").length,
+    skipped: results.filter(r => r.status === "ERROR" || r.status === "FAILED").length,
     results,
+    cleanup: cleanupResult,
   });
 }
 
-async function isAgentDue(
-  agentId: string,
-  schedule: { hour: number; minute: number; everyDays: number },
-  now: Date
-) {
-  const targetToday = new Date(now);
-  targetToday.setHours(schedule.hour, schedule.minute, 0, 0);
-  if (now < targetToday) return false;
 
-  const latestRun = await prisma.agentRun.findFirst({
-    where: {
-      agentId,
-      status: { in: [RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.SUCCEEDED] },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!latestRun) return true;
-  if (latestRun.createdAt >= targetToday) return false;
-
-  const elapsed = now.getTime() - latestRun.createdAt.getTime();
-  return elapsed >= schedule.everyDays * 24 * 60 * 60 * 1000;
-}
