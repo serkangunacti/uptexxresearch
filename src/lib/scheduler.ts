@@ -2,23 +2,57 @@ import { RunStatus } from "@prisma/client";
 import { AGENT_DEFINITIONS } from "./agent-definitions";
 import { ensureAgents } from "./agents";
 import { prisma } from "./db";
-import { enqueueAgentRun } from "./queue";
+import { dispatchAgentRun } from "./github-actions";
 
-export async function enqueueDueAgents(now = new Date()) {
+export type ScheduledRunResult = {
+  agentId: string;
+  status: "QUEUED" | "FAILED";
+  error?: string;
+};
+
+export async function scheduleDueAgents(now = new Date()) {
   await ensureAgents();
 
   const dueAgents = AGENT_DEFINITIONS.filter((agent) => agent.status === "ACTIVE" && agent.schedule);
-  const enqueued: string[] = [];
+  const results: ScheduledRunResult[] = [];
 
   for (const agent of dueAgents) {
     if (!agent.schedule) continue;
     if (!(await isAgentDue(agent.id, agent.schedule, now))) continue;
 
-    await enqueueAgentRun(agent.id, "schedule");
-    enqueued.push(agent.id);
+    const run = await prisma.agentRun.create({
+      data: {
+        agentId: agent.id,
+        status: "QUEUED",
+        metadata: { reason: "schedule" },
+      },
+    });
+
+    try {
+      await dispatchAgentRun(agent.id, run.id);
+      results.push({ agentId: agent.id, status: "QUEUED" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      await prisma.agentRun.update({
+        where: { id: run.id },
+        data: {
+          status: "FAILED",
+          finishedAt: new Date(),
+          error: message,
+          metadata: { reason: "schedule", error: message },
+        },
+      });
+
+      results.push({
+        agentId: agent.id,
+        status: "FAILED",
+        error: message,
+      });
+    }
   }
 
-  return enqueued;
+  return results;
 }
 
 async function isAgentDue(

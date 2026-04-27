@@ -1,6 +1,8 @@
 name: Agent Runner
 
 on:
+  schedule:
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       agentId:
@@ -11,7 +13,33 @@ on:
         required: true
 
 jobs:
+  schedule-agents:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sweep due agents
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          GITHUB_REPO: ${{ vars.GITHUB_REPO || github.repository }}
+          GITHUB_WORKFLOW_REF: ${{ github.ref_name }}
+          TZ: ${{ vars.TZ || 'Europe/Istanbul' }}
+        run: npx tsx scripts/github-scheduler.ts
+
   run-agent:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30 # Gives plenty of time for 100s of results
     steps:

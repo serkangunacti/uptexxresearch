@@ -56,7 +56,7 @@ Panel: [http://localhost:3000](http://localhost:3000)
    - `DATABASE_URL` — Supabase pooler bağlantısı
    - `DIRECT_URL` — Supabase direkt bağlantısı
    - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` — panel girişi
-   - `CRON_SECRET` — Vercel Cron bearer doğrulaması
+   - `CRON_SECRET` — harici/manual `/api/cron` çağrıları için bearer secret
    - `GITHUB_PAT`, `GITHUB_REPO` — agent run workflow dispatch
    - `TAVILY_API_KEY` — web arama
    - `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `MINIMAX_MODEL` — rapor üretimi
@@ -65,9 +65,7 @@ Panel: [http://localhost:3000](http://localhost:3000)
 
 ### Cron ve Background Runner
 
-Vercel Cron `/api/cron` endpoint'ini saatlik çağırır. Endpoint, zamanı gelen ajanlar için veritabanında `QUEUED` run kaydı açar ve `.github/workflows/agent-runner.yml` workflow'unu tetikler. Uzun süren web arama ve MiniMax rapor üretimi GitHub Actions üzerinde çalışır.
-
-Saatlik cron için Vercel Pro gerekir. Hobby planda cron sıklığını günlük sınıra göre değiştirmen gerekir.
+Saatlik zamanlayıcı GitHub Actions `schedule` event'i üzerinden çalışır. Scheduled workflow zamanı gelen ajanlar için veritabanında `QUEUED` run kaydı açar ve aynı workflow'u `workflow_dispatch` ile tetikler. Uzun süren web arama ve MiniMax rapor üretimi GitHub Actions üzerinde çalışır.
 
 ### Custom Domain
 
@@ -96,6 +94,6 @@ DNS ayarlarında Vercel'in verdiği CNAME kaydını domain sağlayıcına ekle.
 - `GET /api/reports/:id/excel` — Rapor Excel indir
 - `POST /api/auth/login` — Admin girişi
 - `POST /api/auth/logout` — Admin çıkışı
-- `GET /api/cron` — Secret ile çalışan zamanlayıcı endpoint
+- `GET /api/cron` — Secret ile çalışan harici/manual scheduler endpoint'i
 
 `/api/health`, `/api/auth/login`, `/api/auth/logout` ve `CRON_SECRET` ile çağrılan `/api/cron` dışındaki API endpoint'leri imzalı admin session cookie ister.
