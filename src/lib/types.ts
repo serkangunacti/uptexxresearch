@@ -33,6 +33,9 @@ export type GeneratedFinding = {
   sourceUrl?: string;
   score?: number;
   metadata?: Record<string, unknown>;
+  isDuplicate?: boolean;
+  duplicateOf?: string;
+  deduplicationScore?: number;
 };
 
 export type GeneratedReport = {

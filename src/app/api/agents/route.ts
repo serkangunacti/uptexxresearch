@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ensureAgents } from "@/lib/agents";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = CreateAgentSchema.parse(body);
 
+    const { queries, ...createData } = validated;
+
     const agent = await prisma.agent.create({
       data: {
-        ...validated,
+        id: randomUUID(),
+        ...createData,
+        customQueries: JSON.stringify(queries),
         isCustom: true,
         slug: validated.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         status: validated.status || "ACTIVE",

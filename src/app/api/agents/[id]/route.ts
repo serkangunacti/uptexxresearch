@@ -11,6 +11,7 @@ const UpdateAgentSchema = z.object({
   scheduleLabel: z.string().min(1).max(100).optional(),
   defaultPrompt: z.string().min(10).max(5000).optional(),
   customPrompt: z.string().min(10).max(5000).optional(),
+  queries: z.array(z.string().min(1)).min(1).max(10).optional(),
   customQueries: z.array(z.string().min(1)).min(1).max(10).optional(),
   status: z.enum(["ACTIVE", "PAUSED"]).optional(),
   reportRetentionDays: z.number().int().min(1).max(365).optional(),
@@ -80,6 +81,8 @@ export async function PUT(
     const { id } = await context.params;
     const body = await request.json();
     const validated = UpdateAgentSchema.parse(body);
+    const { queries, customQueries, ...updateData } = validated;
+    const normalizedCustomQueries = customQueries ?? queries;
 
     // Check if agent exists and is custom (not system)
     const existingAgent = await prisma.agent.findUnique({
@@ -100,7 +103,8 @@ export async function PUT(
     const agent = await prisma.agent.update({
       where: { id },
       data: {
-        ...validated,
+        ...updateData,
+        customQueries: normalizedCustomQueries ? JSON.stringify(normalizedCustomQueries) : undefined,
         updatedAt: new Date(),
         updatedBy: "system" // TODO: Add user context
       }

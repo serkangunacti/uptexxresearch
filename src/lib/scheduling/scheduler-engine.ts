@@ -5,13 +5,13 @@ export interface ScheduleConfig {
   id: string;
   agentId: string;
   type: "SIMPLE" | "ADVANCED" | "CUSTOM";
-  hour?: number;
-  minute?: number;
-  everyDays?: number;
+  hour?: number | null;
+  minute?: number | null;
+  everyDays?: number | null;
   daysOfWeek: string[];
   timezone: string;
-  startHour?: number;
-  endHour?: number;
+  startHour?: number | null;
+  endHour?: number | null;
   isEnabled: boolean;
 }
 
@@ -19,12 +19,12 @@ export interface WorkRule {
   id: string;
   scheduleId: string;
   name: string;
-  description?: string;
+  description?: string | null;
   condition: "ALWAYS" | "BUSINESS_HOURS" | "WEEKDAYS_ONLY" | "WEEKENDS_ONLY" | "CUSTOM_HOURS";
-  customStartHour?: number;
-  customEndHour?: number;
-  maxRunsPerDay?: number;
-  minIntervalMins?: number;
+  customStartHour?: number | null;
+  customEndHour?: number | null;
+  maxRunsPerDay?: number | null;
+  minIntervalMins?: number | null;
   priority: number;
   isActive: boolean;
 }
@@ -119,7 +119,7 @@ export class SchedulerEngine {
     }
 
     // Check time range
-    if (schedule.startHour !== undefined && schedule.endHour !== undefined) {
+    if (schedule.startHour !== undefined && schedule.startHour !== null && schedule.endHour !== undefined && schedule.endHour !== null) {
       const currentHour = now.getHours();
       if (currentHour < schedule.startHour || currentHour >= schedule.endHour) {
         return false;
@@ -198,7 +198,7 @@ export class SchedulerEngine {
         return dayOfWeek === 0 || dayOfWeek === 6;
 
       case "CUSTOM_HOURS":
-        if (rule.customStartHour === undefined || rule.customEndHour === undefined) {
+        if (rule.customStartHour === undefined || rule.customStartHour === null || rule.customEndHour === undefined || rule.customEndHour === null) {
           return false;
         }
         return hour >= rule.customStartHour && hour < rule.customEndHour;

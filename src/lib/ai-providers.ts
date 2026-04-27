@@ -11,6 +11,10 @@ export interface AIProvider {
   ): Promise<GeneratedReport>;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class OpenRouterProvider implements AIProvider {
   private client: OpenAI;
 
@@ -35,7 +39,7 @@ export class OpenRouterProvider implements AIProvider {
     try {
       // Format sources for prompt
       const sourcesText = sources
-        .map((source, index) => `[${index + 1}] ${source.title}\nURL: ${source.url}\nContent: ${source.content}\n`)
+        .map((source, index) => `[${index + 1}] ${source.title}\nURL: ${source.url}\nContent: ${source.snippet}\n`)
         .join("\n");
 
       // Get model from agent config or use default
@@ -95,12 +99,12 @@ JSON formatı:
 
       return parsed;
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("OpenRouter generation error:", error);
 
       // Log failed usage
       if (runId) {
-        await this.logUsage(agent.id, runId, "unknown", null, startTime, error.message);
+        await this.logUsage(agent.id, runId, "unknown", null, startTime, getErrorMessage(error));
       }
 
       throw error;
@@ -161,7 +165,7 @@ export class MiniMaxProvider implements AIProvider {
     try {
       // Format sources for prompt
       const sourcesText = sources
-        .map((source, index) => `[${index + 1}] ${source.title}\nURL: ${source.url}\nContent: ${source.content}\n`)
+        .map((source, index) => `[${index + 1}] ${source.title}\nURL: ${source.url}\nContent: ${source.snippet}\n`)
         .join("\n");
 
       const systemPrompt = `Sen bir araştırma asistanısın. Aşağıdaki kaynaklardan ${agent.name} için rapor hazırla.
@@ -217,12 +221,12 @@ JSON formatı:
 
       return parsed;
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("MiniMax generation error:", error);
 
       // Log failed usage
       if (runId) {
-        await this.logUsage(agent.id, runId, null, startTime, error.message);
+        await this.logUsage(agent.id, runId, null, startTime, getErrorMessage(error));
       }
 
       throw error;

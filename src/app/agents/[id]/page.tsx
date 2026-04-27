@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AgentForm } from "../components/AgentForm";
+import { AgentForm } from "../../components/AgentForm";
 
 interface Agent {
   id: string;
@@ -14,7 +14,7 @@ interface Agent {
   defaultPrompt: string;
   customPrompt?: string;
   customQueries?: string[];
-  status: string;
+  status: "ACTIVE" | "PAUSED";
   isCustom: boolean;
   reportRetentionDays: number;
   archiveOldReports: boolean;
