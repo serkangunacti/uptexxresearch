@@ -228,5 +228,3 @@ export function AgentForm({
     </form>
   );
 }
-
-export default AgentForm;
