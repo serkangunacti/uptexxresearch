@@ -136,9 +136,12 @@ export function Sidebar() {
           </div>
           <p className="sidebar-version">v0.1.0 · Uptexx</p>
           <button 
-            onClick={() => {
-              document.cookie = "uptexx_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-              window.location.href = "/login";
+            onClick={async () => {
+              try {
+                await fetch("/api/auth/login", { method: "DELETE" });
+              } finally {
+                window.location.href = "/login";
+              }
             }}
             className="logout-button"
           >

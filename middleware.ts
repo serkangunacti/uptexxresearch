@@ -1,9 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+const AUTH_COOKIE_NAME = "uptexx_auth";
+const SESSION_TTL_SECONDS = 60 * 60;
+const AUTH_SECRET = process.env.AUTH_SECRET ?? "uptexx-auth-fallback-secret";
+const encoder = new TextEncoder();
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip static files, images, and the login page itself
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -14,37 +18,72 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie
-  const authCookie = request.cookies.get("uptexx_auth");
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
-  if (!authCookie || authCookie.value !== "true") {
-    // Redirect to login if not authenticated
+  if (!(await verifyAuthToken(token))) {
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete(AUTH_COOKIE_NAME);
+    return response;
   }
 
-  // If authenticated, refresh the cookie to extend the session for another hour (Sliding Session)
   const response = NextResponse.next();
-  response.cookies.set("uptexx_auth", "true", {
+  response.cookies.set(AUTH_COOKIE_NAME, await createAuthToken(), {
     path: "/",
-    maxAge: 60 * 60, // Refresh to 1 hour
-    httpOnly: false,
+    maxAge: SESSION_TTL_SECONDS,
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
   });
 
   return response;
 }
 
+async function createAuthToken() {
+  const expiresAt = String(Date.now() + SESSION_TTL_SECONDS * 1000);
+  const signature = await signValue(expiresAt);
+  return `${expiresAt}.${signature}`;
+}
+
+async function verifyAuthToken(token?: string) {
+  if (!token) {
+    return false;
+  }
+
+  const [expiresAt, signature] = token.split(".");
+
+  if (!expiresAt || !signature) {
+    return false;
+  }
+
+  const expectedSignature = await signValue(expiresAt);
+  const expiryTime = Number(expiresAt);
+
+  return signature === expectedSignature && Number.isFinite(expiryTime) && expiryTime > Date.now();
+}
+
+async function signValue(value: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(AUTH_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  return toBase64Url(new Uint8Array(signature));
+}
+
+function toBase64Url(bytes: Uint8Array) {
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
