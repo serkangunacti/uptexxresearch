@@ -28,106 +28,19 @@ enum FindingKind {
   SYSTEM
 }
 
-enum AIProvider {
-  OPENROUTER
-  MINIMAX
-  OPENAI
-  ANTHROPIC
-}
-
-enum AIModel {
-  OPENROUTER_CLAUDE_3_5_SONNET
-  OPENROUTER_GPT_4_TURBO
-  OPENROUTER_LLAMA_3_70B
-  OPENROUTER_MISTRAL_LARGE
-  MINIMAX_M2_7
-  OPENAI_GPT_4
-  ANTHROPIC_CLAUDE_3_OPUS
-}
-
-enum ScheduleType {
-  SIMPLE
-  ADVANCED
-  CUSTOM
-}
-
-enum DayOfWeek {
-  MONDAY
-  TUESDAY
-  WEDNESDAY
-  THURSDAY
-  FRIDAY
-  SATURDAY
-  SUNDAY
-}
-
-enum RuleCondition {
-  ALWAYS
-  BUSINESS_HOURS
-  WEEKDAYS_ONLY
-  WEEKENDS_ONLY
-  CUSTOM_HOURS
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum FootballLeague {
-  PREMIER_LEAGUE
-  LA_LIGA
-  SERIE_A
-  BUNDESLIGA
-  LIGUE_1
-  CHAMPIONS_LEAGUE
-  EUROPA_LEAGUE
-  SUPER_LIG
-  OTHER
-}
-
 model Agent {
-  id            String      @id
-  slug          String      @unique
+  id            String     @id
+  slug          String     @unique
   name          String
   description   String
   cadence       String
   scheduleLabel String
   defaultPrompt String
   status        AgentStatus @default(ACTIVE)
-
-  isCustom            Boolean @default(false)
-  createdBy           String?
-  updatedBy           String?
-  customPrompt        String?
-  customQueries       String? @db.Text
-  config              Json?
-  reportRetentionDays Int     @default(7)
-  archiveOldReports   Boolean @default(false)
-  legacySchedule      Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  runs           AgentRun[]
-  reports        Report[]
-  scheduleConfig ScheduleConfig?
-  executions     ScheduleExecution[]
-  tasks          AgentTask[]
-  aiConfigs      AIModelConfig[]
-  aiUsageLogs    AIUsageLog[]
-
-  @@index([isCustom, status])
-  @@index([createdBy])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  runs          AgentRun[]
+  reports       Report[]
 }
 
 model AgentRun {
@@ -157,206 +70,23 @@ model Report {
   publicUrl      String          @default("")
   slackFileId    String?
   slackMessageTs String?
-  isArchived     Boolean         @default(false)
-  archivedAt     DateTime?
   createdAt      DateTime        @default(now())
   agent          Agent           @relation(fields: [agentId], references: [id])
   run            AgentRun?       @relation(fields: [runId], references: [id])
   findings       ReportFinding[]
 
   @@index([agentId, createdAt])
-  @@index([isArchived, createdAt])
 }
 
 model ReportFinding {
-  id                 String           @id @default(cuid())
-  reportId           String
-  kind               FindingKind
-  title              String
-  body               String
-  sourceUrl          String?
-  score              Int?
-  metadata           Json?
-  isDuplicate        Boolean          @default(false)
-  duplicateOf        String?
-  deduplicationScore Float?
-  createdAt          DateTime         @default(now())
-  report             Report           @relation(fields: [reportId], references: [id])
-  hash               FindingHash?
-  footballFinding    FootballFinding?
-}
-
-model FindingHash {
-  id              String        @id @default(cuid())
-  reportFindingId String        @unique
-  contentHash     String
-  semanticHash    String?
-  createdAt       DateTime      @default(now())
-  finding         ReportFinding @relation(fields: [reportFindingId], references: [id], onDelete: Cascade)
-
-  @@index([contentHash])
-  @@index([semanticHash])
-}
-
-model AIModelConfig {
-  id          String     @id @default(cuid())
-  agentId     String
-  provider    AIProvider @default(OPENROUTER)
-  model       AIModel
-  temperature Float      @default(0.2)
-  maxTokens   Int        @default(2000)
-  costPerMTok Float      @default(0.0)
-  isActive    Boolean    @default(true)
-  priority    Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  agent       Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  @@unique([agentId, priority])
-  @@index([agentId, isActive])
-}
-
-model AIUsageLog {
-  id           String     @id @default(cuid())
-  agentId      String
-  runId        String
-  provider     AIProvider
-  model        AIModel
-  inputTokens  Int
-  outputTokens Int
-  costUSD      Float
-  latencyMs    Int
-  success      Boolean
-  errorMessage String?
-  createdAt    DateTime   @default(now())
-  agent        Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  @@index([agentId, createdAt])
-  @@index([provider, createdAt])
-}
-
-model ScheduleConfig {
-  id      String @id @default(cuid())
-  agentId String @unique
-  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  type ScheduleType @default(SIMPLE)
-
-  hour      Int?
-  minute    Int?
-  everyDays Int?
-
-  daysOfWeek DayOfWeek[] @default([])
-  timezone   String      @default("Europe/Istanbul")
-
-  startHour Int?
-  endHour   Int?
-
-  rules WorkRule[]
-
-  isEnabled Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([agentId])
-}
-
-model WorkRule {
-  id         String         @id @default(cuid())
-  scheduleId String
-  schedule   ScheduleConfig @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-
-  name        String
-  description String?
-  condition   RuleCondition
-
-  customStartHour Int?
-  customEndHour   Int?
-
-  maxRunsPerDay   Int?
-  minIntervalMins Int?
-
-  priority  Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([scheduleId])
-}
-
-model ScheduleExecution {
-  id      String @id @default(cuid())
-  agentId String
-  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  scheduledFor DateTime
-  executedAt   DateTime?
-  reason       String
-  ruleId       String?
-
-  status     String
-  skipReason String?
-
-  createdAt DateTime @default(now())
-
-  @@index([agentId, scheduledFor])
-  @@index([status, createdAt])
-}
-
-model AgentTask {
-  id      String @id @default(cuid())
-  agentId String
-  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  title       String
-  description String?
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(PENDING)
-  dueDate     DateTime?
-  assignedTo  String?
-
-  metadata Json?
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime?
-
-  @@index([agentId, status])
-  @@index([status, dueDate])
-  @@index([assignedTo])
-}
-
-model FootballMatch {
-  id         String         @id @default(cuid())
-  externalId String         @unique
-  homeTeam   String
-  awayTeam   String
-  league     FootballLeague
-  matchDate  DateTime
-  status     String
-  homeScore  Int?
-  awayScore  Int?
-  venue      String?
-  referee    String?
-  attendance Int?
-  odds       Json?
-  prediction String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-
-  findings FootballFinding[]
-
-  @@index([matchDate])
-  @@index([league, matchDate])
-  @@index([status])
-}
-
-model FootballFinding {
-  id              String        @id @default(cuid())
-  reportFindingId String        @unique
-  matchId         String
-  match           FootballMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  matchType       String
-  createdAt       DateTime      @default(now())
-  finding         ReportFinding @relation(fields: [reportFindingId], references: [id], onDelete: Cascade)
+  id        String      @id @default(cuid())
+  reportId  String
+  kind      FindingKind
+  title     String
+  body      String
+  sourceUrl String?
+  score     Int?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  report    Report      @relation(fields: [reportId], references: [id])
 }

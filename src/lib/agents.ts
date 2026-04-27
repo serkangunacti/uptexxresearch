@@ -24,9 +24,6 @@ export async function ensureAgents() {
           scheduleLabel: agent.scheduleLabel,
           defaultPrompt: agent.prompt,
           status: agent.status
-        },
-        select: {
-          id: true
         }
       })
     )

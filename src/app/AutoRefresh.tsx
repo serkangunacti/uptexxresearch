@@ -8,11 +8,7 @@ export function AutoRefresh({ intervalMs = 5000 }: { intervalMs?: number }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      try {
-        router.refresh();
-      } catch (error) {
-        console.error("Auto-refresh failed:", error);
-      }
+      router.refresh();
     }, intervalMs);
 
     return () => clearInterval(interval);
