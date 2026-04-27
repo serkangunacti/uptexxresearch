@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().optional().default(""),
+  DATABASE_URL: z.string().min(1),
   APP_PUBLIC_URL: z.string().url().default("http://localhost:3000"),
 
   // AI Providers
