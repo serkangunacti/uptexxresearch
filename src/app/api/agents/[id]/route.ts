@@ -26,34 +26,33 @@ export async function GET(
     const { id } = await context.params;
     const agent = await prisma.agent.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        cadence: true,
+        scheduleLabel: true,
+        defaultPrompt: true,
+        customPrompt: true,
+        customQueries: true,
+        status: true,
+        isCustom: true,
+        reportRetentionDays: true,
+        archiveOldReports: true,
         runs: {
+          select: { createdAt: true, status: true },
           orderBy: { createdAt: "desc" },
           take: 5
         },
         reports: {
+          select: { createdAt: true, title: true },
           orderBy: { createdAt: "desc" },
-          take: 5,
-          include: {
-            _count: {
-              select: { findings: true }
-            }
-          }
+          take: 5
         },
-        tasks: {
-          orderBy: { createdAt: "desc" },
-          take: 10
-        },
-        aiConfigs: {
-          where: { isActive: true },
-          orderBy: { priority: 'asc' }
-        },
-        scheduleConfig: true,
         _count: {
           select: {
             runs: true,
-            reports: true,
-            tasks: true
+            reports: true
           }
         }
       }
@@ -63,7 +62,19 @@ export async function GET(
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ agent });
+    return NextResponse.json({
+      agent: {
+        ...agent,
+        customQueries: agent.customQueries ? JSON.parse(agent.customQueries) : [],
+        tasks: [],
+        aiConfigs: [],
+        _count: {
+          runs: agent._count.runs,
+          reports: agent._count.reports,
+          tasks: 0
+        }
+      }
+    });
   } catch (error) {
     console.error("Agent fetch error:", error);
     return NextResponse.json(

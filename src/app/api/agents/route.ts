@@ -17,28 +17,37 @@ const CreateAgentSchema = z.object({
 });
 
 export async function GET() {
-  await ensureAgents();
-  const agents = await prisma.agent.findMany({
-    orderBy: { createdAt: "asc" },
-    include: {
-      runs: {
-        orderBy: { createdAt: "desc" },
-        take: 1
-      },
-      reports: {
-        orderBy: { createdAt: "desc" },
-        take: 1
-      },
-      _count: {
-        select: {
-          tasks: true,
-          aiConfigs: true
+  try {
+    await ensureAgents();
+    const agents = await prisma.agent.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        scheduleLabel: true,
+        isCustom: true,
+        runs: {
+          select: { createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 1
+        },
+        reports: {
+          select: { createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 1
         }
       }
-    }
-  });
+    });
 
-  return NextResponse.json({ agents });
+    return NextResponse.json({ agents });
+  } catch (error) {
+    console.error("Agents fetch error:", error);
+    return NextResponse.json({
+      agents: []
+    }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

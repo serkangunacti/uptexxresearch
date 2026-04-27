@@ -16,9 +16,14 @@ async function getDashboardData() {
 
     const [agentsRaw, reports, runs, succeededCount] = await Promise.all([
       prisma.agent.findMany({
-        include: {
-          runs: { orderBy: { createdAt: "desc" }, take: 1 },
-          reports: { orderBy: { createdAt: "desc" }, take: 1 },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          status: true,
+          scheduleLabel: true,
+          runs: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
+          reports: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
         },
       }),
       prisma.report.findMany({
@@ -43,7 +48,21 @@ async function getDashboardData() {
     return { agents, reports, runs, succeededCount, hasError: false };
   } catch (error) {
     console.error("Dashboard data load failed:", error);
-    return { agents: [], reports: [], runs: [], succeededCount: 0, hasError: true };
+    return {
+      agents: AGENT_DEFINITIONS.map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        description: agent.description,
+        status: agent.status,
+        scheduleLabel: agent.scheduleLabel,
+        runs: [],
+        reports: [],
+      })),
+      reports: [],
+      runs: [],
+      succeededCount: 0,
+      hasError: true,
+    };
   }
 }
 
