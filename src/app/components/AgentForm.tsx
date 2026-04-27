@@ -91,7 +91,7 @@ export function AgentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md-grid-cols-2 gap-6">
         {/* Name */}
         <div className="form-group">
           <label>Ajan Adı</label>
@@ -129,7 +129,7 @@ export function AgentForm({
         {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md-grid-cols-2 gap-6">
         {/* Cadence */}
         <div className="form-group">
           <label>Kadans</label>

@@ -183,7 +183,7 @@ export default function AgentDetailPage() {
       ) : (
         <>
           {/* Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ marginTop: "2rem" }}>
+          <div className="grid grid-cols-1 md-grid-cols-3 gap-6" style={{ marginTop: "2rem" }}>
             <div className="panel">
               <div className="panel-header">
                 <h3>Durum</h3>
