@@ -14,10 +14,17 @@ import type { SessionUser } from "./types";
 
 const ROLE_ORDER: UserRole[] = ["VIEWER", "MANAGER", "OWNER_ADMIN"];
 
-export async function authenticateUser(email: string, password: string) {
-  const normalized = normalizeEmail(email);
-  const user = await prisma.user.findUnique({
-    where: { email: normalized },
+export async function authenticateUser(identifier: string, password: string) {
+  const normalized = normalizeEmail(identifier);
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: normalized },
+        normalized.includes("@")
+          ? { email: normalized }
+          : { email: { startsWith: `${normalized}@`, mode: "insensitive" } },
+      ],
+    },
     include: { company: true },
   });
 

@@ -6,13 +6,13 @@ import { enforceRateLimit } from "@/lib/governance";
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 export async function POST(request: Request) {
   try {
-    const { email, username, password } = await request.json();
-    const normalizedEmail = normalizeEmail(email ?? username);
-    const rateKey = `${normalizedEmail}:${request.headers.get("x-forwarded-for") ?? "local"}`;
+    const { identifier, email, username, password } = await request.json();
+    const normalizedIdentifier = normalizeEmail(identifier ?? email ?? username);
+    const rateKey = `${normalizedIdentifier}:${request.headers.get("x-forwarded-for") ?? "local"}`;
 
     await enforceRateLimit("login", rateKey, 10, 15);
 
-    const session = await authenticateUser(normalizedEmail, String(password ?? ""));
+    const session = await authenticateUser(normalizedIdentifier, String(password ?? ""));
 
     if (!session) {
       return NextResponse.json({ success: false, error: "Hatalı bilgiler" }, { status: 401, headers: NO_STORE_HEADERS });
