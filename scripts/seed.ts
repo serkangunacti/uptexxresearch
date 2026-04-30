@@ -1,9 +1,9 @@
-import { ensureAgents } from "../src/lib/agents";
+import { ensureSystemData } from "../src/lib/agents";
 import { prisma } from "../src/lib/db";
 
 async function main() {
-  await ensureAgents();
-  console.log("Seeded agent registry.");
+  const { company, owner } = await ensureSystemData();
+  console.log(`Seeded company ${company.name} with owner ${owner.email}.`);
 }
 
 main()

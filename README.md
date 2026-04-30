@@ -3,6 +3,7 @@
 Araştırma ajanlarını yöneten, raporları panelde PDF/Excel olarak sunan otomasyon paneli.
 
 > Slack alanları veritabanında hazır tutulur; Slack'e otomatik teslim bu stabilizasyon sürümünde aktif değildir.
+> Sistem artık tenant bazlı çalışır. Her admin kendi şirketinin owner hesabıdır ve kendi provider API key'lerini girmeden araştırma başlatamaz.
 
 **Stack:** Next.js 16 · TypeScript · Prisma · Supabase (PostgreSQL) · Vercel
 
@@ -19,18 +20,26 @@ cp .env.example .env.local
 ```
 
 4. `DATABASE_URL` ve `DIRECT_URL` alanlarını Supabase bilgileriyle doldur
-5. Admin ve job ayarlarını ekle:
+5. Session, encryption ve seed owner ayarlarını ekle:
 
 ```bash
-ADMIN_USERNAME="serkangunacti"
-ADMIN_PASSWORD="guclu-bir-sifre"
+OWNER_ADMIN_PASSWORD="guclu-bir-bootstrap-sifre"
 SESSION_SECRET="$(openssl rand -base64 48)"
+APP_ENCRYPTION_KEY="$(openssl rand -base64 48)"
 CRON_SECRET="$(openssl rand -base64 32)"
 GITHUB_REPO="serkangunacti/uptexxresearch"
 GITHUB_PAT="github-fine-grained-token"
 TAVILY_API_KEY="..."
 TZ="Europe/Istanbul"
 ```
+
+İlk seeded owner admin hesabı:
+
+```text
+serkangunacti@kuzeytakip.com
+```
+
+Bu hesap ilk girişten sonra kendi tenant'ı için provider API key girmeden hiçbir ajanı çalıştıramaz.
 
 ### 2. Veritabanını Hazırla
 
@@ -55,17 +64,33 @@ Panel: [http://localhost:3000](http://localhost:3000)
 3. Environment Variables bölümünde ekle:
    - `DATABASE_URL` — Supabase pooler bağlantısı
    - `DIRECT_URL` — Supabase direkt bağlantısı
-   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` — panel girişi
+   - `OWNER_ADMIN_PASSWORD` — ilk owner admin bootstrap parolası
+   - `SESSION_SECRET` — imzalı oturum cookie secret'ı
+   - `APP_ENCRYPTION_KEY` — tenant API key'lerini AES-256-GCM ile şifrelemek için master secret
    - `CRON_SECRET` — harici/manual `/api/cron` çağrıları için bearer secret
    - `GITHUB_PAT`, `GITHUB_REPO` — agent run workflow dispatch
    - `TAVILY_API_KEY` — web arama
-   - `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `MINIMAX_MODEL` — rapor üretimi
    - `TZ=Europe/Istanbul` — ajan çalışma saatleri
 4. Deploy et
 
 ### Cron ve Background Runner
 
-Saatlik zamanlayıcı GitHub Actions `schedule` event'i üzerinden çalışır. Scheduled workflow zamanı gelen ajanlar için veritabanında `QUEUED` run kaydı açar ve aynı workflow'u `workflow_dispatch` ile tetikler. Uzun süren web arama ve MiniMax rapor üretimi GitHub Actions üzerinde çalışır.
+Saatlik zamanlayıcı GitHub Actions `schedule` event'i üzerinden çalışır. Scheduled workflow zamanı gelen ajanlar için veritabanında `QUEUED` veya `BLOCKED` run kaydı açar ve yalnızca tenant içinde geçerli provider key varsa `workflow_dispatch` tetikler. Uzun süren web arama ve rapor üretimi GitHub Actions üzerinde çalışır.
+
+## Tenant ve Provider Mantığı
+
+- Her `OWNER_ADMIN` ayrı bir şirket/tenant sahibidir.
+- API key'ler tenant bazında şifreli saklanır ve başka tenant oturumlarında görünmez.
+- Desteklenen hazır provider katalogu:
+  - `OpenRouter`
+  - `OpenAI`
+  - `Anthropic`
+  - `MiniMax`
+  - `GLM`
+  - `Gemini`
+  - `Custom OpenAI-Compatible`
+- Admin kendi planına uygun provider key'ini Ayarlar ekranından ekler.
+- Global fallback provider yoktur. Sistem env içindeki bir model token'ı ile sessizce araştırma başlatmaz.
 
 ### Custom Domain
 
@@ -92,8 +117,14 @@ DNS ayarlarında Vercel'in verdiği CNAME kaydını domain sağlayıcına ekle.
 - `GET /api/reports` — Son raporları listele
 - `GET /api/reports/:id/download` — Rapor PDF indir
 - `GET /api/reports/:id/excel` — Rapor Excel indir
-- `POST /api/auth/login` — Admin girişi
-- `POST /api/auth/logout` — Admin çıkışı
+- `POST /api/auth/login` — Tenant kullanıcısı girişi
+- `POST /api/auth/logout` — Çıkış
+- `POST /api/auth/invite/accept` — Davet kabul ve ilk şifre oluşturma
+- `GET/POST /api/users` — Tenant kullanıcı davet yönetimi
+- `GET/POST /api/credentials` — Tenant provider key yönetimi
+- `DELETE /api/credentials/:id` — Tenant provider key silme
+- `GET/POST /api/tasks` — Görev kütüphanesi yönetimi
+- `GET /api/templates` — Ajan şablonları
 - `GET /api/cron` — Secret ile çalışan harici/manual scheduler endpoint'i
 
-`/api/health`, `/api/auth/login`, `/api/auth/logout` ve `CRON_SECRET` ile çağrılan `/api/cron` dışındaki API endpoint'leri imzalı admin session cookie ister.
+`/api/health`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/invite/accept` ve `CRON_SECRET` ile çağrılan `/api/cron` dışındaki API endpoint'leri imzalı tenant session cookie ister.

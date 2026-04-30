@@ -1,46 +1,33 @@
 import Link from "next/link";
-import { ensureAgents } from "@/lib/agents";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { AGENT_DEFINITIONS } from "@/lib/agent-definitions";
+import { getVisibleAgentsForUser } from "@/lib/access";
+import { getCurrentUser } from "@/lib/server-auth";
 import { RunButton } from "./RunButton";
 import { DeleteRunButton } from "./DeleteRunButton";
 import { AutoRefresh } from "./AutoRefresh";
+import type { SessionUser } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-async function getDashboardData() {
+async function getDashboardData(user: SessionUser) {
   try {
-    await ensureAgents();
-
-    // Get agent order from definitions
-    const definitionOrder = AGENT_DEFINITIONS.map((d) => d.id);
-
-    const [agentsRaw, reports, runs, succeededCount] = await Promise.all([
-      prisma.agent.findMany({
-        include: {
-          runs: { orderBy: { createdAt: "desc" }, take: 1 },
-          reports: { orderBy: { createdAt: "desc" }, take: 1 },
-        },
-      }),
+    const [agents, reports, runs, succeededCount] = await Promise.all([
+      getVisibleAgentsForUser(user),
       prisma.report.findMany({
+        where: { companyId: user.companyId },
         orderBy: { createdAt: "desc" },
         take: 3,
-        include: { agent: true },
+        include: { agent: true, triggeredBy: true },
       }),
       prisma.agentRun.findMany({
+        where: { companyId: user.companyId },
         orderBy: { createdAt: "desc" },
         take: 3,
-        include: { agent: true },
+        include: { agent: true, triggeredBy: true },
       }),
-      prisma.agentRun.count({ where: { status: "SUCCEEDED" } }),
+      prisma.agentRun.count({ where: { companyId: user.companyId, status: "SUCCEEDED" } }),
     ]);
-
-    // Sort agents by definition order (stable)
-    const agents = agentsRaw.sort((a, b) => {
-      const ia = definitionOrder.indexOf(a.id);
-      const ib = definitionOrder.indexOf(b.id);
-      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-    });
 
     return { agents, reports, runs, succeededCount, hasError: false };
   } catch (error) {
@@ -50,8 +37,11 @@ async function getDashboardData() {
 }
 
 export default async function Home() {
-  const { agents, reports, runs, succeededCount, hasError } = await getDashboardData();
-  const activeAgents = agents.filter((a) => a.status === "ACTIVE").length;
+  const session = await getCurrentUser();
+  if (!session) redirect("/login");
+
+  const { agents, reports, runs, succeededCount, hasError } = await getDashboardData(session.user);
+  const activeAgents = agents.filter((agent) => agent.status === "ACTIVE").length;
   const latestReport = reports[0];
 
   const now = new Date();
@@ -65,9 +55,8 @@ export default async function Home() {
   return (
     <div className="page-shell">
       <AutoRefresh intervalMs={5000} />
-      {/* Page Header */}
       <header className="page-header">
-        <p className="greeting">{timeStr}</p>
+        <p className="greeting">{session.user.companyName} · {timeStr}</p>
         <h1>
           Research <span>Automation</span>
         </h1>
@@ -78,11 +67,10 @@ export default async function Home() {
           <div className="panel-header">
             <h3>Dashboard verileri yüklenemedi</h3>
           </div>
-          <p className="empty-state">Veritabanı bağlantısını ve Vercel ortam değişkenlerini kontrol edin.</p>
+          <p className="empty-state">Veritabanı bağlantısını ve tenant yetkilerini kontrol edin.</p>
         </div>
       ) : null}
 
-      {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card accent" style={{ "--i": 0 } as React.CSSProperties}>
           <p className="stat-label">Aktif Ajanlar</p>
@@ -92,7 +80,7 @@ export default async function Home() {
         <div className="stat-card" style={{ "--i": 1 } as React.CSSProperties}>
           <p className="stat-label">Toplam Rapor</p>
           <p className="stat-value">{reports.length > 0 ? reports.length + "+" : "0"}</p>
-          <p className="stat-sub">Veritabanında</p>
+          <p className="stat-sub">Tenant içinde</p>
         </div>
         <div className="stat-card" style={{ "--i": 2 } as React.CSSProperties}>
           <p className="stat-label">Başarılı Çalışma</p>
@@ -108,7 +96,6 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Agents Section */}
       <section id="agents">
         <div className="section-heading">
           <h2>Ajanlar</h2>
@@ -121,11 +108,7 @@ export default async function Home() {
             const isActive = agent.status === "ACTIVE";
 
             return (
-              <div
-                className="agent-card"
-                key={agent.id}
-                style={{ "--i": index } as React.CSSProperties}
-              >
+              <div className="agent-card" key={agent.id} style={{ "--i": index } as React.CSSProperties}>
                 <div className="agent-card-header">
                   <Link href={`/agents/${agent.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1 }}>
                     <h3>{agent.name}</h3>
@@ -146,7 +129,7 @@ export default async function Home() {
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12,6 12,12 16,14" />
                     </svg>
-                    {agent.scheduleLabel}
+                    {agent.scheduleLabel || agent.cadence || "Plan yok"}
                   </span>
                 </div>
 
@@ -156,7 +139,7 @@ export default async function Home() {
                       ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`
                       : "Henüz çalıştırılmadı"}
                   </span>
-                  <RunButton agentId={agent.id} disabled={!isActive} />
+                  <RunButton agentId={agent.id} disabled={!isActive || !agent.credentialId || !agent.modelName} />
                 </div>
               </div>
             );
@@ -164,9 +147,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Reports + Run Log */}
       <div className="split-section" id="reports">
-        {/* Recent Reports */}
         <div className="panel">
           <div className="panel-header">
             <h3>Son Raporlar</h3>
@@ -182,18 +163,18 @@ export default async function Home() {
                   <Link href={`/reports/${report.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                     <p className="run-agent">{report.agent.name}</p>
                     <p style={{ margin: "4px 0", color: "var(--text-primary)", fontWeight: 500 }}>{report.title}</p>
-                    <p className="run-meta">{report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</p>
+                    <p className="run-meta">
+                      {report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
+                      {report.triggeredBy ? ` · ${report.triggeredBy.name}` : ""}
+                    </p>
                   </Link>
                 </div>
-                <div className="run-actions">
-                  {report.runId && <DeleteRunButton runId={report.runId} />}
-                </div>
+                <div className="run-actions">{report.runId && <DeleteRunButton runId={report.runId} />}</div>
               </div>
             ))
           )}
         </div>
 
-        {/* Run Log */}
         <div className="panel" id="run-log">
           <div className="panel-header">
             <h3>Çalışma Geçmişi</h3>
@@ -207,11 +188,12 @@ export default async function Home() {
                 <span className={`run-dot ${run.status.toLowerCase()}`} />
                 <div className="run-info">
                   <p className="run-agent">{run.agent.name}</p>
-                  <p className="run-meta">{run.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</p>
+                  <p className="run-meta">
+                    {run.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
+                    {run.triggeredBy ? ` · ${run.triggeredBy.name}` : ""}
+                  </p>
                 </div>
-                <span className={`run-status-tag ${run.status.toLowerCase()}`}>
-                  {run.status}
-                </span>
+                <span className={`run-status-tag ${run.status.toLowerCase()}`}>{run.status}</span>
                 <div className="run-actions">
                   <DeleteRunButton runId={run.id} />
                 </div>

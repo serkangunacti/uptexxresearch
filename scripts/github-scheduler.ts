@@ -1,4 +1,5 @@
 import { prisma } from "../src/lib/db";
+import { ensureSystemData } from "../src/lib/agents";
 import { scheduleDueAgents } from "../src/lib/scheduler";
 
 async function main() {
@@ -6,6 +7,7 @@ async function main() {
   console.log(`Starting scheduled sweep at ${now.toISOString()}`);
 
   try {
+    await ensureSystemData();
     const results = await scheduleDueAgents(now);
     console.log(JSON.stringify({ ok: true, timestamp: now.toISOString(), results }, null, 2));
   } catch (error) {

@@ -1,78 +1,152 @@
 import { prisma } from "./db";
-import { getAgentDefinition } from "./agent-definitions";
+import { resolveCredentialForAgent } from "./credentials";
+import { generateReportWithProvider } from "./minimax";
 import { searchAllQueries } from "./search";
-import { generateReportWithMiniMax } from "./minimax";
 
 export async function executeAgentRun(agentId: string, runId: string) {
-  const agentDef = getAgentDefinition(agentId);
-  if (!agentDef) throw new Error(`Agent definition not found: ${agentId}`);
+  const run = await prisma.agentRun.findUnique({
+    where: { id: runId },
+    include: {
+      agent: {
+        include: {
+          tasks: { include: { task: true }, orderBy: { sortOrder: "asc" } },
+          rule: true,
+          credential: true,
+        },
+      },
+      triggeredBy: true,
+    },
+  });
 
-  // Mark run as RUNNING
+  if (!run || !run.agent) {
+    throw new Error(`Run or agent not found: ${runId}`);
+  }
+
+  const agent = run.agent;
+  const rule = agent.rule;
+  const maxSourceAgeDays = rule?.maxSourceAgeDays ?? 7;
+  const dedupeLookbackDays = rule?.dedupeLookbackDays ?? 7;
+
+  const credential = await resolveCredentialForAgent({
+    companyId: run.companyId ?? "",
+    credentialId: agent.credentialId,
+    modelName: agent.modelName,
+  });
+
   await prisma.agentRun.update({
     where: { id: runId },
-    data: { status: "RUNNING", startedAt: new Date() },
+    data: { status: "RUNNING", startedAt: new Date(), error: null },
   });
 
   try {
-    // Step 1: Search the web
-    console.log(`[runner] Searching for agent: ${agentDef.name}`);
-    const sources = await searchAllQueries(agentDef.queries);
-    console.log(`[runner] Found ${sources.length} sources`);
+    const queries = readStringArray(agent.searchQueries);
+    if (queries.length === 0) {
+      throw new Error("Ajan için sorgu listesi tanımlanmamış.");
+    }
 
-    // Step 2: Generate report with MiniMax AI
-    console.log(`[runner] Generating report with MiniMax...`);
-    const generated = await generateReportWithMiniMax(agentDef, sources);
-    console.log(`[runner] Report generated: ${generated.title}`);
+    const freshResults = await searchAllQueries(queries, maxSourceAgeDays);
+    const dedupedResults = await filterRecentDuplicateSources(
+      run.companyId ?? "",
+      freshResults,
+      dedupeLookbackDays
+    );
 
-    // Step 3: Save report to database
+    const generated = await generateReportWithProvider(
+      {
+        id: agent.id,
+        name: agent.name,
+        defaultPrompt: agent.defaultPrompt,
+        modelProvider: agent.modelProvider,
+        modelName: agent.modelName,
+      },
+      agent.tasks.map((item) => ({
+        name: item.task.name,
+        instruction: item.task.instruction,
+      })),
+      dedupedResults,
+      credential
+    );
+
     const report = await prisma.report.create({
       data: {
+        companyId: run.companyId,
         agentId,
         runId,
+        triggeredByUserId: run.triggeredByUserId,
         title: generated.title,
         summary: generated.summary,
         pdfPath: "",
         publicUrl: "",
         findings: {
-          create: generated.findings.map((f) => ({
-            kind: f.kind,
-            title: f.title,
-            body: f.body,
-            sourceUrl: f.sourceUrl ?? null,
-            score: f.score ?? null,
-            metadata: (f.metadata ?? {}) as Record<string, string>,
+          create: generated.findings.map((finding) => ({
+            companyId: run.companyId,
+            kind: finding.kind,
+            title: finding.title,
+            body: finding.body,
+            sourceUrl: finding.sourceUrl ?? null,
+            score: finding.score ?? null,
+            metadata: (finding.metadata ?? {}) as Record<string, string>,
           })),
         },
       },
     });
 
-    // Step 4: Mark run as SUCCEEDED
+    await prisma.apiCredential.update({
+      where: { id: credential.id },
+      data: { lastUsedAt: new Date() },
+    });
+
     await prisma.agentRun.update({
       where: { id: runId },
       data: {
         status: "SUCCEEDED",
         finishedAt: new Date(),
         metadata: {
-          sourcesFound: sources.length,
+          sourcesFound: freshResults.length,
+          sourcesUsed: dedupedResults.length,
           findingsCount: generated.findings.length,
           reportId: report.id,
+          model: agent.modelName,
+          provider: agent.modelProvider,
         },
       },
     });
 
     return report;
   } catch (error) {
-    // Mark run as FAILED
+    const message = error instanceof Error ? error.message : String(error);
     await prisma.agentRun.update({
       where: { id: runId },
       data: {
         status: "FAILED",
         finishedAt: new Date(),
+        error: message,
         metadata: {
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
         },
       },
     });
     throw error;
   }
+}
+
+async function filterRecentDuplicateSources(companyId: string, results: Awaited<ReturnType<typeof searchAllQueries>>, lookbackDays: number) {
+  const since = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
+  const recentFindings = await prisma.reportFinding.findMany({
+    where: {
+      companyId,
+      createdAt: { gte: since },
+      sourceUrl: { not: null },
+    },
+    select: { sourceUrl: true },
+  });
+
+  const seenUrls = new Set(recentFindings.map((finding) => finding.sourceUrl).filter(Boolean));
+  return results.filter((result) => !seenUrls.has(result.url));
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean)
+    : [];
 }

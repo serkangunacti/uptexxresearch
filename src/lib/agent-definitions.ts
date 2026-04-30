@@ -1,128 +1,260 @@
-import type { AgentDefinition } from "./types";
+import type { AgentTemplateSeed, DefaultAgentSeed } from "./types";
 
-export const AGENT_DEFINITIONS: AgentDefinition[] = [
+export const AGENT_TEMPLATE_SEEDS: AgentTemplateSeed[] = [
   {
-    id: "research-tr",
-    slug: "arastirma-ajani-tr",
-    name: "Araştırma Ajanı TR",
-    description: "Türkiye'de IT danışmanlığı, lisans satışı, Microsoft 365, Azure ve sistem destek fırsatlarını araştırır.",
-    cadence: "2 günde bir",
-    scheduleLabel: "2 günde bir 10:00",
-    status: "ACTIVE",
-    schedule: { hour: 10, minute: 0, everyDays: 2 },
-    queries: [
-      "\"Microsoft 365\" \"satınalma\" \"teklif\" Türkiye",
-      "\"Azure\" \"bakım destek\" \"teklif\" Türkiye",
-      "\"IT danışmanlığı\" \"ihale\" Türkiye",
-      "\"sistem bakım destek\" \"aylık\" \"firma\""
+    id: "sales-research",
+    name: "Satış Fırsatı Araştırma",
+    category: "sales",
+    description: "Potansiyel müşterileri, ihale ve teklif sinyallerini toplar.",
+    defaultPrompt:
+      "Şirket için potansiyel müşteri olabilecek fırsatları, ihtiyaç sinyallerini ve iletişim izlerini topla. Aynı kurum veya aynı kaynağı tekrar etme. Sadece son 7 gün içinde yayınlanan kaynakları kullan.",
+    defaultQueries: [
+      "IT danışmanlığı teklif ihale satınalma son 7 gün Türkiye",
+      "Microsoft 365 Azure bakım destek talebi son 7 gün Türkiye",
+      "kurumsal yazılım danışmanlığı teklif son 7 gün"
     ],
-    prompt:
-      "Türkiye pazarında Uptexx için potansiyel müşteri olabilecek IT danışmanlığı, lisans satışı, Microsoft 365, Azure, bakım ve sistem destek taleplerini bul. Kaynak linki, ihtiyaç sinyali ve öncelik skoru ver."
+    defaultTasks: [
+      {
+        name: "Fırsat sinyallerini topla",
+        category: "sales",
+        description: "Talep, ihale, teklif veya ihtiyaç sinyallerini çıkartır.",
+        instruction: "Yeni fırsat sinyallerini kaynak linkleriyle çıkart ve özetle.",
+      },
+      {
+        name: "Müşteri önceliği puanla",
+        category: "sales",
+        description: "Firma veya iş fırsatı için öncelik puanı üretir.",
+        instruction: "Her fırsat için gerekçeli öncelik puanı üret.",
+      },
+    ],
+    defaultSchedule: {
+      hour: 10,
+      minute: 0,
+      timezone: "Europe/Istanbul",
+      intervalDays: 2,
+    },
+    defaultRule: {
+      maxRunsPerDay: 1,
+      maxRunsPerWeek: 4,
+      maxSourceAgeDays: 7,
+      dedupeLookbackDays: 7,
+      preventDuplicates: true,
+    },
+    suggestedProvider: "OPENROUTER",
   },
   {
-    id: "research-tr-sme",
-    slug: "arastirma-ajani-tr-ii",
-    name: "Araştırma Ajanı TR II",
-    description: "500 kullanıcıya kadar olabilecek Türkiye firmalarını listeler ve iletişim bilgilerini zenginleştirir.",
-    cadence: "2 günde bir",
-    scheduleLabel: "2 günde bir 11:00",
-    status: "ACTIVE",
-    schedule: { hour: 11, minute: 0, everyDays: 2 },
-    queries: [
-      "\"çalışan sayısı\" \"50\" \"500\" \"Türkiye\" \"iletişim\"",
-      "\"Microsoft iş ortağı\" \"Türkiye\" \"iletişim\"",
-      "\"sanayi\" \"teknoloji\" \"iletişim\" \"Türkiye\"",
-      "\"firma\" \"bilgi teknolojileri\" \"iletişim\" \"Türkiye\""
+    id: "market-news",
+    name: "Pazar ve Haber Takibi",
+    category: "news",
+    description: "AI, IT ve pazar haberlerini takip eder.",
+    defaultPrompt:
+      "Belirlenen alanla ilgili son 7 günde yayınlanan önemli haberleri, ürün duyurularını ve fiyat değişimlerini topla. Tekrarlayan haberleri çıkar.",
+    defaultQueries: [
+      "AI model release pricing update last 7 days",
+      "enterprise IT product launch executive change last 7 days",
+      "OpenAI Anthropic Google Meta product update last 7 days"
     ],
-    prompt:
-      "Türkiye'de 500 kullanıcıya kadar olabilecek firmaları bul. Firma adı, adres, telefon, web sitesi, e-posta varsa e-posta, sektör, kullanıcı sayısı tahmini ve kaynak güven skoru üret. Aynı firmayı tekrar etme."
+    defaultTasks: [
+      {
+        name: "Haber özeti çıkar",
+        category: "news",
+        description: "Son haberleri kısa özetler halinde çıkarır.",
+        instruction: "Her bulguyu bir yönetici özeti gibi yaz.",
+      },
+      {
+        name: "Risk ve fırsat analizi",
+        category: "news",
+        description: "Haberi iş etkisine göre yorumlar.",
+        instruction: "Haberin iş etkisini, fırsat ve riskiyle birlikte belirt.",
+      },
+    ],
+    defaultSchedule: {
+      hour: 9,
+      minute: 0,
+      timezone: "Europe/Istanbul",
+      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
+    },
+    defaultRule: {
+      maxRunsPerDay: 1,
+      maxRunsPerWeek: 7,
+      maxSourceAgeDays: 7,
+      dedupeLookbackDays: 7,
+      preventDuplicates: true,
+    },
+    suggestedProvider: "OPENROUTER",
   },
   {
-    id: "research-eu",
-    slug: "arastirma-ajani-eu",
-    name: "Araştırma Ajanı EU",
-    description: "Avrupa odaklı yazılım proje danışmanlığı ve freelance iş fırsatlarını araştırır.",
-    cadence: "2 günde bir",
-    scheduleLabel: "2 günde bir 08:00",
-    status: "ACTIVE",
-    schedule: { hour: 8, minute: 0, everyDays: 2 },
-    queries: [
-      "site:upwork.com/jobs software consultant Europe hourly 40",
-      "site:freelancer.com/projects software consultant Europe",
-      "\"software consulting\" \"hourly\" \"$40\" Europe",
-      "\"Azure\" \"consultant\" \"hourly\" Europe"
+    id: "operations-research",
+    name: "Operasyon ve Destek Takibi",
+    category: "operations",
+    description: "Operasyonel süreçleri ve destek gereksinimlerini araştırır.",
+    defaultPrompt:
+      "Kurumsal operasyon, destek ve bakım süreçleriyle ilgili yeni ihtiyaç sinyallerini bul. Son 7 gün dışındaki içerikleri kullanma.",
+    defaultQueries: [
+      "sistem bakım destek talebi son 7 gün",
+      "outsource IT destek ihtiyacı son 7 gün",
+      "operasyon iyileştirme teknoloji partner son 7 gün"
     ],
-    prompt:
-      "Avrupa odaklı dönemsel veya proje bazlı yazılım danışmanlığı işlerini bul. Saatlik 40 USD altındaki ilanları rapora alma. Upwork/Freelancer benzeri kaynaklarda proje özeti, bütçe, saatlik oran, müşteri sinyali ve başvuru önerisi ver."
+    defaultTasks: [
+      {
+        name: "Operasyon ihtiyacı çıkar",
+        category: "operations",
+        description: "Operasyonel ihtiyaçları sınıflandırır.",
+        instruction: "İhtiyacı, kapsamını ve olası çözüm yönünü kısa yaz.",
+      },
+    ],
+    defaultSchedule: {
+      hour: 8,
+      minute: 30,
+      timezone: "Europe/Istanbul",
+      daysOfWeek: [1, 2, 3, 4, 5],
+    },
+    defaultRule: {
+      maxRunsPerDay: 1,
+      maxRunsPerWeek: 5,
+      maxSourceAgeDays: 7,
+      dedupeLookbackDays: 7,
+      preventDuplicates: true,
+    },
+    suggestedProvider: "OPENROUTER",
   },
   {
-    id: "research-ai",
-    slug: "arastirma-ajani-ai",
-    name: "Araştırma Ajanı AI",
-    description: "AI model, fiyat, release, benchmark ve ürün güncellemelerini günlük raporlar.",
-    cadence: "Her gün",
-    scheduleLabel: "Her gün 09:00",
-    status: "ACTIVE",
-    schedule: { hour: 9, minute: 0, everyDays: 1 },
-    queries: [
-      "AI model release pricing update today OpenAI Anthropic Google Meta",
-      "site:openai.com blog model pricing API update",
-      "site:anthropic.com news model pricing API update",
-      "site:ai.google.dev Gemini release pricing"
+    id: "football-analysis",
+    name: "Futbol Analizi",
+    category: "sports",
+    description: "Günün maçlarını, geçmiş istatistikleri ve takım durumlarını analiz eder.",
+    defaultPrompt:
+      "Günün maçlarını topla. Son 7 gün içindeki haberleri, sakat-cezalı bilgilerini, lig sıralamasını, son form grafiğini ve geçmiş karşılaşmaları kullanarak güncel analiz yaz. Eski veya tekrarlanan içerikleri tekrar etme.",
+    defaultQueries: [
+      "today football fixtures league standings injuries suspensions last 7 days",
+      "head to head football match preview injuries standings last 7 days",
+      "team news injuries suspensions match preview today football"
     ],
-    prompt:
-      "Dünyadaki AI model ve platform güncellemelerini topla. Yeni model, fiyat değişikliği, API özelliği, benchmark veya önemli ürün duyurusunu kaynak linkleriyle raporla."
+    defaultTasks: [
+      {
+        name: "Maç listesi çıkar",
+        category: "sports",
+        description: "Günün maçlarını toplar.",
+        instruction: "Önce günün maçlarını lig ve saat bilgisiyle listele.",
+      },
+      {
+        name: "Karşılaştırmalı analiz yaz",
+        category: "sports",
+        description: "Takımları kıyaslayarak analiz üretir.",
+        instruction: "Form, kadro, eksikler, puan durumu ve geçmiş maçlara göre karşılaştırmalı analiz yaz.",
+      },
+    ],
+    defaultSchedule: {
+      hour: 11,
+      minute: 0,
+      timezone: "Europe/Istanbul",
+      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
+    },
+    defaultRule: {
+      maxRunsPerDay: 2,
+      maxRunsPerWeek: 14,
+      maxSourceAgeDays: 7,
+      dedupeLookbackDays: 7,
+      preventDuplicates: true,
+    },
+    suggestedProvider: "OPENROUTER",
   },
   {
-    id: "research-crypto",
-    slug: "arastirma-ajani-crypto",
-    name: "Araştırma Ajanı CRYPTO",
-    description: "Kripto haberleri, piyasa sinyalleri, büyük transferler ve Polymarket beklentilerini günlük raporlar.",
-    cadence: "Her gün",
-    scheduleLabel: "Her gün 07:00",
-    status: "ACTIVE",
-    schedule: { hour: 7, minute: 0, everyDays: 1 },
-    queries: [
-      "crypto market news today whale transfer cold wallet",
-      "Polymarket crypto bitcoin ethereum market odds",
-      "Bitcoin Ethereum market forecast today",
-      "crypto exchange reserve inflow outflow news"
+    id: "finance-market",
+    name: "Finans ve Kripto Takibi",
+    category: "finance",
+    description: "Piyasa haberlerini ve sinyallerini izler.",
+    defaultPrompt:
+      "Son 7 günde yayınlanan piyasa haberlerini, büyük hareketleri ve risk sinyallerini özetle. Finansal tavsiye verme.",
+    defaultQueries: [
+      "crypto market news last 7 days whale transfer",
+      "bitcoin ethereum market outlook last 7 days",
+      "financial market signal macro risk last 7 days"
     ],
-    prompt:
-      "Kripto piyasasındaki önemli gelişmeleri, yükseliş/düşüş sinyallerini, büyük transferleri, Polymarket beklentilerini ve riskleri özetle. Finansal tavsiye verme; araştırma ve risk sinyali formatında raporla."
-  },
-  {
-    id: "finance-crypto",
-    slug: "finans-ajani-crypto",
-    name: "Finans Ajanı Crypto",
-    description: "Gelecekte Binance işlemleri için ayrılmış pasif ajan. Şimdilik hiçbir trade işlemi yapmaz.",
-    cadence: "Pasif",
-    scheduleLabel: "Zamanlama yok",
-    status: "PAUSED",
-    queries: [],
-    prompt:
-      "Pasif ajan. Araştırma Ajanı CRYPTO raporlarını gelecekte okuyacak; şimdilik trade, API emir veya otomatik karar yok."
-  },
-  {
-    id: "research-it",
-    slug: "arastirma-ajani-it",
-    name: "Araştırma Ajanı IT",
-    description: "Teknoloji dünyası ürün lansmanları, yönetici değişimleri ve kurumsal gelişmeleri günlük raporlar.",
-    cadence: "Her gün",
-    scheduleLabel: "Her gün 08:30",
-    status: "ACTIVE",
-    schedule: { hour: 8, minute: 30, everyDays: 1 },
-    queries: [
-      "IT product launch executive appointment technology news today",
-      "Microsoft Google AWS product launch executive change",
-      "enterprise IT news leadership change product release",
-      "technology company appoints CEO CTO CIO today"
+    defaultTasks: [
+      {
+        name: "Piyasa sinyali topla",
+        category: "finance",
+        description: "Piyasa sinyallerini özetler.",
+        instruction: "Yükseliş/düşüş sinyallerini ve riskleri listele.",
+      },
     ],
-    prompt:
-      "IT dünyasındaki son gelişmeleri, ürün lansmanlarını, üst düzey yönetici atamalarını/görevden ayrılmaları ve kurumsal teknoloji haberlerini kaynak linkleriyle özetle."
-  }
+    defaultSchedule: {
+      hour: 7,
+      minute: 0,
+      timezone: "Europe/Istanbul",
+      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
+    },
+    defaultRule: {
+      maxRunsPerDay: 1,
+      maxRunsPerWeek: 7,
+      maxSourceAgeDays: 7,
+      dedupeLookbackDays: 7,
+      preventDuplicates: true,
+    },
+    suggestedProvider: "OPENROUTER",
+  },
 ];
 
-export function getAgentDefinition(agentId: string) {
-  return AGENT_DEFINITIONS.find((agent) => agent.id === agentId || agent.slug === agentId);
+export const DEFAULT_AGENT_SEEDS: DefaultAgentSeed[] = [
+  {
+    templateId: "sales-research",
+    slug: "arastirma-ajani-tr",
+    name: "Araştırma Ajanı TR",
+    description: "Türkiye'de IT danışmanlığı, lisans satışı, Microsoft 365 ve Azure fırsatlarını araştırır.",
+    modelProvider: "OPENROUTER",
+    modelName: "openai/gpt-4.1-mini",
+  },
+  {
+    templateId: "sales-research",
+    slug: "arastirma-ajani-tr-ii",
+    name: "Araştırma Ajanı TR II",
+    description: "Türkiye'de KOBİ ölçekli IT fırsatlarını araştırır.",
+    modelProvider: "OPENROUTER",
+    modelName: "openai/gpt-4.1-mini",
+  },
+  {
+    templateId: "sales-research",
+    slug: "arastirma-ajani-eu",
+    name: "Araştırma Ajanı EU",
+    description: "Avrupa yazılım danışmanlığı ve freelance fırsatlarını araştırır.",
+    modelProvider: "OPENROUTER",
+    modelName: "openai/gpt-4.1-mini",
+  },
+  {
+    templateId: "market-news",
+    slug: "arastirma-ajani-ai",
+    name: "Araştırma Ajanı AI",
+    description: "AI model, fiyat, benchmark ve ürün güncellemelerini raporlar.",
+    modelProvider: "OPENROUTER",
+    modelName: "anthropic/claude-3.5-sonnet",
+  },
+  {
+    templateId: "finance-market",
+    slug: "arastirma-ajani-crypto",
+    name: "Araştırma Ajanı CRYPTO",
+    description: "Kripto haberleri ve piyasa sinyallerini raporlar.",
+    modelProvider: "OPENROUTER",
+    modelName: "openai/gpt-4.1-mini",
+  },
+  {
+    templateId: "operations-research",
+    slug: "arastirma-ajani-it",
+    name: "Araştırma Ajanı IT",
+    description: "Teknoloji dünyası ürün lansmanları ve kurumsal gelişmeleri izler.",
+    modelProvider: "OPENROUTER",
+    modelName: "openai/gpt-4.1-mini",
+  },
+  {
+    templateId: "football-analysis",
+    slug: "futbol-analiz-ajani",
+    name: "Futbol Analiz Ajanı",
+    description: "Günün maçlarını ve takım verilerini karşılaştırmalı analiz eder.",
+    modelProvider: "OPENROUTER",
+    modelName: "anthropic/claude-3.5-sonnet",
+  },
+];
+
+export function getTemplateSeed(templateId: string) {
+  return AGENT_TEMPLATE_SEEDS.find((template) => template.id === templateId);
 }

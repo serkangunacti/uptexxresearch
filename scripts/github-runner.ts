@@ -1,4 +1,5 @@
 import { executeAgentRun } from "../src/lib/runner";
+import { ensureSystemData } from "../src/lib/agents";
 import { prisma } from "../src/lib/db";
 
 async function main() {
@@ -14,6 +15,7 @@ async function main() {
 
   console.log(`Starting background job for agent: ${agentId}, runId: ${runId}`);
   try {
+    await ensureSystemData();
     const report = await executeAgentRun(agentId, runId);
     console.log(`Report generated successfully: ${report.id}`);
   } catch (error) {

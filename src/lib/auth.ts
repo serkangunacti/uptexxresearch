@@ -1,44 +1,20 @@
-export const AUTH_COOKIE_NAME = "uptexx_auth";
-export const SESSION_TTL_SECONDS = 60 * 60;
+export const AUTH_COOKIE_NAME = "uptexx_session";
+export const SESSION_TTL_SECONDS = 60 * 60 * 12;
 
 type SessionPayload = {
-  sub: string;
-  iat: number;
+  token: string;
   exp: number;
-  v: 1;
+  v: 2;
 };
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export function normalizeUsername(input: unknown) {
-  return String(input ?? "")
-    .trim()
-    .toLowerCase()
-    .split("@")[0];
+export function normalizeEmail(input: unknown) {
+  return String(input ?? "").trim().toLowerCase();
 }
 
-export function authIsConfigured() {
-  return Boolean(
-    process.env.ADMIN_USERNAME?.trim() &&
-      process.env.ADMIN_PASSWORD &&
-      getSessionSecret()
-  );
-}
-
-export function credentialsAreValid(username: unknown, password: unknown) {
-  const configuredUsername = normalizeUsername(process.env.ADMIN_USERNAME);
-  const configuredPassword = process.env.ADMIN_PASSWORD ?? "";
-
-  if (!authIsConfigured()) return false;
-
-  return (
-    normalizeUsername(username) === configuredUsername &&
-    constantTimeEqual(String(password ?? ""), configuredPassword)
-  );
-}
-
-export async function createSessionCookie(username: string, now = new Date()) {
+export async function createSignedSessionCookie(sessionToken: string, now = new Date()) {
   const secret = getSessionSecret();
   if (!secret) {
     throw new Error("SESSION_SECRET or AUTH_SECRET is not configured.");
@@ -46,10 +22,9 @@ export async function createSessionCookie(username: string, now = new Date()) {
 
   const issuedAt = Math.floor(now.getTime() / 1000);
   const payload: SessionPayload = {
-    sub: normalizeUsername(username),
-    iat: issuedAt,
+    token: sessionToken,
     exp: issuedAt + SESSION_TTL_SECONDS,
-    v: 1,
+    v: 2,
   };
 
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
@@ -72,9 +47,9 @@ export async function readSessionCookie(value: string | undefined | null, now = 
     const nowSeconds = Math.floor(now.getTime() / 1000);
 
     if (
-      payload.v !== 1 ||
-      typeof payload.sub !== "string" ||
-      !payload.sub ||
+      payload.v !== 2 ||
+      typeof payload.token !== "string" ||
+      !payload.token ||
       typeof payload.exp !== "number" ||
       payload.exp <= nowSeconds
     ) {
@@ -112,19 +87,6 @@ function getSessionSecret() {
   return secret.length >= 32 ? secret : "";
 }
 
-function constantTimeEqual(left: string, right: string) {
-  const leftBytes = encoder.encode(left);
-  const rightBytes = encoder.encode(right);
-  const length = Math.max(leftBytes.length, rightBytes.length);
-  let mismatch = leftBytes.length ^ rightBytes.length;
-
-  for (let i = 0; i < length; i += 1) {
-    mismatch |= (leftBytes[i] ?? 0) ^ (rightBytes[i] ?? 0);
-  }
-
-  return mismatch === 0;
-}
-
 async function getHmacKey(secret: string) {
   return crypto.subtle.importKey(
     "raw",
@@ -149,11 +111,9 @@ async function verify(value: string, signature: string, secret: string) {
 function base64UrlEncode(value: string | Uint8Array) {
   const bytes = typeof value === "string" ? encoder.encode(value) : value;
   let binary = "";
-
   for (let i = 0; i < bytes.length; i += 1) {
     binary += String.fromCharCode(bytes[i]);
   }
-
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 

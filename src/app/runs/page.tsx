@@ -1,10 +1,15 @@
 import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/server-auth";
 import { RunListClient } from "./RunListClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunsPage() {
+  const session = await getCurrentUser();
+  if (!session) redirect("/login");
+
   let runs: Prisma.AgentRunGetPayload<{
     include: { agent: { select: { name: true } } };
   }>[] = [];
@@ -12,6 +17,7 @@ export default async function RunsPage() {
 
   try {
     runs = await prisma.agentRun.findMany({
+      where: { companyId: session.user.companyId },
       orderBy: { createdAt: "desc" },
       include: { agent: { select: { name: true } } },
     });
@@ -31,7 +37,7 @@ export default async function RunsPage() {
           <div className="panel-header">
             <h3>Çalışmalar yüklenemedi</h3>
           </div>
-          <p className="empty-state">Veritabanı bağlantısını ve Vercel ortam değişkenlerini kontrol edin.</p>
+          <p className="empty-state">Veritabanı bağlantısını ve tenant yetkilerini kontrol edin.</p>
         </div>
       ) : null}
 

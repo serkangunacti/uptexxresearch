@@ -16,6 +16,10 @@ export function RunButton({ agentId, disabled }: { agentId: string; disabled?: b
         router.refresh(); // Refresh dashboard data immediately
         setTimeout(() => setState("idle"), 3000); // Reset button after 3s
       } else {
+        const data = await response.json().catch(() => null);
+        if (data?.error) {
+          alert(data.error);
+        }
         setState("error");
         setTimeout(() => setState("idle"), 3000);
       }

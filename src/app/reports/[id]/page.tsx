@@ -1,18 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/server-auth";
+import { getReportForUser } from "@/lib/access";
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getCurrentUser();
+  if (!session) redirect("/login");
   const { id } = await params;
-  const report = await prisma.report.findUnique({
-    where: { id },
-    include: {
-      agent: true,
-      findings: {
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
+  const report = await getReportForUser(session.user, id).catch(() => null);
 
   if (!report) notFound();
 

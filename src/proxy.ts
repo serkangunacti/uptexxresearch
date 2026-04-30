@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   AUTH_COOKIE_NAME,
-  createSessionCookie,
+  createSignedSessionCookie,
   getSessionCookieOptions,
   readSessionCookie,
 } from "@/lib/auth";
@@ -28,8 +28,10 @@ export async function proxy(request: NextRequest) {
 
   if (
     pathname === "/login" ||
+    pathname.startsWith("/invite/") ||
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/logout" ||
+    pathname === "/api/auth/invite/accept" ||
     pathname === "/api/health"
   ) {
     return NextResponse.next();
@@ -48,7 +50,7 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
   response.cookies.set(
     AUTH_COOKIE_NAME,
-    await createSessionCookie(session.sub),
+    await createSignedSessionCookie(session.token),
     getSessionCookieOptions()
   );
 

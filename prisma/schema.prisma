@@ -18,6 +18,7 @@ enum RunStatus {
   RUNNING
   SUCCEEDED
   FAILED
+  BLOCKED
 }
 
 enum FindingKind {
@@ -28,65 +29,323 @@ enum FindingKind {
   SYSTEM
 }
 
+enum UserRole {
+  OWNER_ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum ProviderKind {
+  OPENROUTER
+  OPENAI
+  ANTHROPIC
+  MINIMAX
+  GLM
+  GEMINI
+  CUSTOM_OPENAI
+}
+
+model Company {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  users       User[]
+  invites     InviteToken[]
+  credentials ApiCredential[]
+  agents      Agent[]
+  tasks       Task[]
+  runs        AgentRun[]
+  reports     Report[]
+  findings    ReportFinding[]
+  schedules   AgentSchedule[]
+  rules       AgentRule[]
+  logs        AuditLog[]
+}
+
+model User {
+  id              String            @id @default(cuid())
+  companyId       String
+  email           String            @unique
+  name            String
+  role            UserRole
+  passwordHash    String?
+  passwordSetAt   DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  company         Company           @relation(fields: [companyId], references: [id])
+  sessions        UserSession[]
+  invitesSent     InviteToken[]     @relation("InviteSender")
+  credentials     ApiCredential[]   @relation("CredentialOwner")
+  agentAssignments AgentAssignment[]
+  triggeredRuns   AgentRun[]        @relation("RunTriggerUser")
+  generatedReports Report[]         @relation("ReportTriggerUser")
+  auditLogs       AuditLog[]
+
+  @@index([companyId, role])
+}
+
+model UserSession {
+  id         String   @id @default(cuid())
+  userId      String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime?
+  revokedAt   DateTime?
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, expiresAt])
+}
+
+model InviteToken {
+  id               String    @id @default(cuid())
+  companyId        String
+  email            String
+  role             UserRole
+  tokenHash        String    @unique
+  invitedByUserId  String
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  company          Company   @relation(fields: [companyId], references: [id])
+  invitedBy        User      @relation("InviteSender", fields: [invitedByUserId], references: [id])
+
+  @@index([companyId, email, expiresAt])
+}
+
+model ApiCredential {
+  id                String       @id @default(cuid())
+  companyId         String
+  createdByUserId   String
+  provider          ProviderKind
+  planType          String
+  label             String
+  maskedKeyPreview  String
+  baseUrl           String?
+  encryptedKey      String
+  iv                String
+  authTag           String
+  modelOverrides    Json?
+  isActive          Boolean      @default(true)
+  lastUsedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  company           Company      @relation(fields: [companyId], references: [id])
+  createdBy         User         @relation("CredentialOwner", fields: [createdByUserId], references: [id])
+  agents            Agent[]
+
+  @@index([companyId, provider, isActive])
+}
+
+model AgentTemplate {
+  id                 String       @id
+  name               String
+  category           String
+  description        String
+  defaultPrompt      String
+  defaultQueries     Json
+  defaultTasks       Json
+  defaultSchedule    Json
+  suggestedProvider  ProviderKind?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  agents             Agent[]
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  companyId    String?
+  name        String
+  category    String
+  description String
+  instruction String
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  company     Company?    @relation(fields: [companyId], references: [id])
+  agentTasks  AgentTask[]
+
+  @@unique([companyId, name])
+  @@index([companyId, category])
+}
+
 model Agent {
-  id            String     @id
-  slug          String     @unique
-  name          String
-  description   String
-  cadence       String
-  scheduleLabel String
-  defaultPrompt String
-  status        AgentStatus @default(ACTIVE)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  runs          AgentRun[]
-  reports       Report[]
+  id              String            @id @default(cuid())
+  companyId        String?
+  templateId       String?
+  credentialId     String?
+  slug            String
+  name            String
+  description     String
+  cadence         String?
+  scheduleLabel   String?
+  defaultPrompt   String
+  searchQueries   Json              @default("[]")
+  modelProvider   ProviderKind?
+  modelName       String?
+  status          AgentStatus       @default(ACTIVE)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  company         Company?          @relation(fields: [companyId], references: [id])
+  template        AgentTemplate?    @relation(fields: [templateId], references: [id])
+  credential      ApiCredential?    @relation(fields: [credentialId], references: [id])
+  assignments     AgentAssignment[]
+  tasks           AgentTask[]
+  schedule        AgentSchedule?
+  rule            AgentRule?
+  runs            AgentRun[]
+  reports         Report[]
+
+  @@unique([companyId, slug])
+  @@index([companyId, status])
+}
+
+model AgentAssignment {
+  id         String   @id @default(cuid())
+  agentId     String
+  userId      String
+  createdAt   DateTime @default(now())
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([agentId, userId])
+  @@index([userId])
+}
+
+model AgentTask {
+  id         String   @id @default(cuid())
+  agentId     String
+  taskId      String
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  task        Task     @relation(fields: [taskId], references: [id])
+
+  @@unique([agentId, taskId])
+}
+
+model AgentSchedule {
+  id            String   @id @default(cuid())
+  companyId      String?
+  agentId        String   @unique
+  timezone      String   @default("Europe/Istanbul")
+  hour          Int
+  minute        Int
+  intervalDays  Int?
+  daysOfWeek    Json?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  company       Company? @relation(fields: [companyId], references: [id])
+  agent         Agent    @relation(fields: [agentId], references: [id])
+
+  @@index([companyId, isActive])
+}
+
+model AgentRule {
+  id                  String   @id @default(cuid())
+  companyId            String?
+  agentId              String   @unique
+  preventDuplicates    Boolean  @default(true)
+  maxRunsPerDay        Int      @default(1)
+  maxRunsPerWeek       Int      @default(7)
+  maxSourceAgeDays     Int      @default(7)
+  dedupeLookbackDays   Int      @default(7)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  company              Company? @relation(fields: [companyId], references: [id])
+  agent                Agent    @relation(fields: [agentId], references: [id])
+
+  @@index([companyId])
 }
 
 model AgentRun {
-  id         String    @id @default(cuid())
-  agentId    String
-  status     RunStatus @default(QUEUED)
-  startedAt  DateTime?
-  finishedAt DateTime?
-  error      String?
-  metadata   Json?
-  createdAt  DateTime  @default(now())
-  agent      Agent     @relation(fields: [agentId], references: [id])
-  report     Report?
+  id                String     @id @default(cuid())
+  companyId         String?
+  agentId           String
+  triggeredByUserId String?
+  status            RunStatus  @default(QUEUED)
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  error             String?
+  metadata          Json?
+  createdAt         DateTime   @default(now())
+  company           Company?   @relation(fields: [companyId], references: [id])
+  agent             Agent      @relation(fields: [agentId], references: [id])
+  triggeredBy       User?      @relation("RunTriggerUser", fields: [triggeredByUserId], references: [id])
+  report            Report?
 
+  @@index([companyId, createdAt])
   @@index([agentId, createdAt])
   @@index([status, createdAt])
 }
 
 model Report {
-  id             String          @id @default(cuid())
-  agentId        String
-  runId          String?         @unique
-  title          String
-  summary        String
-  htmlPath       String          @default("")
-  pdfPath        String          @default("")
-  publicUrl      String          @default("")
-  slackFileId    String?
-  slackMessageTs String?
-  createdAt      DateTime        @default(now())
-  agent          Agent           @relation(fields: [agentId], references: [id])
-  run            AgentRun?       @relation(fields: [runId], references: [id])
-  findings       ReportFinding[]
+  id                String          @id @default(cuid())
+  companyId         String?
+  agentId           String
+  runId             String?         @unique
+  triggeredByUserId String?
+  title             String
+  summary           String
+  htmlPath          String          @default("")
+  pdfPath           String          @default("")
+  publicUrl         String          @default("")
+  slackFileId       String?
+  slackMessageTs    String?
+  createdAt         DateTime        @default(now())
+  company           Company?        @relation(fields: [companyId], references: [id])
+  agent             Agent           @relation(fields: [agentId], references: [id])
+  run               AgentRun?       @relation(fields: [runId], references: [id])
+  triggeredBy       User?           @relation("ReportTriggerUser", fields: [triggeredByUserId], references: [id])
+  findings          ReportFinding[]
 
+  @@index([companyId, createdAt])
   @@index([agentId, createdAt])
 }
 
 model ReportFinding {
-  id        String      @id @default(cuid())
-  reportId  String
-  kind      FindingKind
-  title     String
-  body      String
-  sourceUrl String?
-  score     Int?
-  metadata  Json?
-  createdAt DateTime    @default(now())
-  report    Report      @relation(fields: [reportId], references: [id])
+  id         String      @id @default(cuid())
+  companyId   String?
+  reportId   String
+  kind       FindingKind
+  title      String
+  body       String
+  sourceUrl  String?
+  score      Int?
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+  company    Company?    @relation(fields: [companyId], references: [id])
+  report     Report      @relation(fields: [reportId], references: [id])
+
+  @@index([companyId, createdAt])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  companyId   String?
+  userId      String?
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  company     Company?  @relation(fields: [companyId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model RateLimitEvent {
+  id         String   @id @default(cuid())
+  scope      String
+  key        String
+  createdAt  DateTime @default(now())
+
+  @@index([scope, key, createdAt])
 }

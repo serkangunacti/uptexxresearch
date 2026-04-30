@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { getReportForUser } from "@/lib/access";
+import { requireUser } from "@/lib/server-auth";
 import { PDFDocument, rgb } from "pdf-lib";
 import fs from "fs";
 import path from "path";
@@ -69,15 +70,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireUser("VIEWER");
     const { id } = await context.params;
-
-    const report = await prisma.report.findUnique({
-      where: { id },
-      include: {
-        agent: true,
-        findings: { orderBy: { createdAt: "asc" } },
-      },
-    });
+    const report = await getReportForUser(session.user, id).catch(() => null);
 
     if (!report) {
       return NextResponse.json({ error: "Rapor bulunamadı." }, { status: 404 });
