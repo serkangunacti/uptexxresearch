@@ -6,7 +6,7 @@ import { Sidebar } from "./Sidebar";
 export function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/login" || pathname.startsWith("/invite/")) {
+  if (pathname === "/" || pathname === "/login" || pathname.startsWith("/invite/")) {
     return <>{children}</>;
   }
 

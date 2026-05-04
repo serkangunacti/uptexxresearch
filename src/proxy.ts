@@ -12,6 +12,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
+    pathname === "/" ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
     pathname === "/uptexx-logo.png" ||

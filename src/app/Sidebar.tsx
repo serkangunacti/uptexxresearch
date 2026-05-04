@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const baseNavItems = [
+const navItems = [
   {
-    href: "/",
+    href: "/dashboard",
     label: "Dashboard",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -19,7 +19,7 @@ const baseNavItems = [
   },
   {
     href: "/catalog",
-    label: "Ajan Kataloğu",
+    label: "Ajan Katalogu",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 5a2 2 0 0 1 2-2h11l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z" />
@@ -30,7 +30,7 @@ const baseNavItems = [
   },
   {
     href: "/agents",
-    label: "Ajanlarım",
+    label: "Ajanlarim",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -52,7 +52,7 @@ const baseNavItems = [
   },
   {
     href: "/runs",
-    label: "Çalışma Geçmişi",
+    label: "Calisma Gecmisi",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -72,21 +72,8 @@ const baseNavItems = [
   },
 ];
 
-const platformNavItem = {
-  href: "/catalog/manage",
-  label: "Katalog Yönetimi",
-  icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7h18" />
-      <path d="M6 3h12l3 4v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7l3-4z" />
-      <path d="M9 12h6M9 16h4" />
-    </svg>
-  ),
-};
-
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -105,22 +92,6 @@ export function Sidebar() {
     };
   }, [mobileOpen]);
 
-  useEffect(() => {
-    fetch("/api/me")
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return response.json();
-      })
-      .then((payload) => {
-        setIsPlatformAdmin(payload?.user?.isPlatformAdmin === true);
-      })
-      .catch(() => {
-        setIsPlatformAdmin(false);
-      });
-  }, []);
-
-  const navItems = isPlatformAdmin ? [...baseNavItems, platformNavItem] : baseNavItems;
-
   return (
     <>
       <header className="mobile-header">
@@ -137,7 +108,7 @@ export function Sidebar() {
       <div className={`sidebar-backdrop ${mobileOpen ? "visible" : ""}`} onClick={() => setMobileOpen(false)} />
 
       <aside className={`sidebar ${mobileOpen ? "open" : ""}`}>
-        <Link href="/" className="sidebar-brand">
+        <Link href="/dashboard" className="sidebar-brand">
           <img src="/uptexx-logo.png" alt="Uptexx" className="brand-logo" />
           <div className="brand-text">
             <h2>UPTEXX</h2>
@@ -146,9 +117,9 @@ export function Sidebar() {
         </Link>
 
         <nav className="sidebar-nav">
-          <div className="nav-section-label">Menü</div>
+          <div className="nav-section-label">Menu</div>
           {navItems.map((item) => {
-            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.replace("/#", "/"));
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

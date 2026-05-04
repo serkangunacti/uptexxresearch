@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const nextPath =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("next") || "/dashboard"
+      : "/dashboard";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        window.location.href = "/";
+        window.location.href = nextPath;
       } else {
         setError(data.error || "Giriş bilgileri hatalı.");
         setLoading(false);

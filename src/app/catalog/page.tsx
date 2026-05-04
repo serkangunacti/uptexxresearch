@@ -15,20 +15,20 @@ export default async function CatalogPage() {
   return (
     <div className="page-shell">
       <header className="page-header">
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
           <div>
-            <h1>Ajan Kataloğu</h1>
+            <h1>Ajan Katalogu</h1>
             <p className="greeting">
-              Paket: {subscription.package.name} · Aktif limit: {subscription.package.activeAgentLimit >= 9999 ? "Sınırsız" : subscription.package.activeAgentLimit}
+              Paket: {subscription.package.name} · Aktif limit: {subscription.package.activeAgentLimit >= 9999 ? "Sinirsiz" : subscription.package.activeAgentLimit}
             </p>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <Link href="/agents" className="secondary-btn">
-              Ajanlarım
+              Ajanlarim
             </Link>
             {session.user.role === "OWNER_ADMIN" && subscription.package.allowsCustomAgentBuilder ? (
               <Link href="/agents/new" className="run-btn" style={{ textDecoration: "none" }}>
-                Custom Ajan Oluştur
+                Custom Ajan Olustur
               </Link>
             ) : null}
           </div>

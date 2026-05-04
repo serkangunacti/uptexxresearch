@@ -1,243 +1,225 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { getVisibleAgentsForUser } from "@/lib/access";
 import { getCurrentUser } from "@/lib/server-auth";
-import { RunButton } from "./RunButton";
-import { DeleteRunButton } from "./DeleteRunButton";
-import { AutoRefresh } from "./AutoRefresh";
-import type { SessionUser } from "@/lib/types";
-import styles from "./emptyStates.module.css";
+import styles from "./landing.module.css";
 
-export const dynamic = "force-dynamic";
+const packages = [
+  {
+    key: "FREE",
+    name: "Free",
+    price: "0 TL",
+    detail: "tek seferlik başlangıç",
+    description: "İlk kurulumu görmek ve tek ajan akışını denemek isteyen ekipler için.",
+    features: ["1 aktif ajan", "Genel haber ajanı", "Temel rapor akışı", "Panel erişimi"],
+  },
+  {
+    key: "BASIC",
+    name: "Basic",
+    price: "3.900 TL",
+    detail: "aylık",
+    description: "Düzenli araştırma yapan küçük ekipler için sade ve hızlı başlangıç paketi.",
+    features: ["3 aktif ajan", "Lead TR ve Viral içerik", "Manuel run desteği", "PDF ve Excel çıktı"],
+  },
+  {
+    key: "PRO",
+    name: "Pro",
+    price: "9.900 TL",
+    detail: "aylık",
+    description: "Araştırmayı satış, finans ve teknoloji tarafında büyütmek isteyen ekipler için.",
+    features: ["10 aktif ajan", "Lead Global ve uzman araştırma ajanları", "Gelişmiş görev akışı", "Daha geniş katalog erişimi"],
+  },
+  {
+    key: "PREMIUM",
+    name: "Premium",
+    price: "24.900 TL",
+    detail: "aylık",
+    description: "Kendi ajanlarını kurmak ve sistemi şirketine özel kurgulamak isteyen yapılar için.",
+    features: ["Sınırsız aktif ajan", "Custom ajan oluşturma", "Tenant özel katalog", "Öncelikli genişleme alanı"],
+    featured: true,
+  },
+];
 
-async function getDashboardData(user: SessionUser) {
-  try {
-    const [agents, reports, runs, succeededCount, credentialCount] = await Promise.all([
-      getVisibleAgentsForUser(user),
-      prisma.report.findMany({
-        where: { companyId: user.companyId },
-        orderBy: { createdAt: "desc" },
-        take: 3,
-        include: { agent: true, triggeredBy: true },
-      }),
-      prisma.agentRun.findMany({
-        where: { companyId: user.companyId },
-        orderBy: { createdAt: "desc" },
-        take: 3,
-        include: { agent: true, triggeredBy: true },
-      }),
-      prisma.agentRun.count({ where: { companyId: user.companyId, status: "SUCCEEDED" } }),
-      prisma.apiCredential.count({ where: { companyId: user.companyId, isActive: true } }),
-    ]);
+const steps = [
+  {
+    title: "Kaynağı seç",
+    body: "Web kaynaklarını, platformları ve görev başlıklarını tek ekranda belirle.",
+  },
+  {
+    title: "Ajanı kur",
+    body: "Hazır katalog ajanını birkaç ayarla aktif et veya Premium pakette kendi ajanını tasarla.",
+  },
+  {
+    title: "Raporu al",
+    body: "Sistem araştırmayı toplar, özetler ve PDF ile Excel olarak sunar.",
+  },
+];
 
-    return { agents, reports, runs, succeededCount, credentialCount, hasError: false };
-  } catch (error) {
-    console.error("Dashboard data load failed:", error);
-    return { agents: [], reports: [], runs: [], succeededCount: 0, credentialCount: 0, hasError: true };
+const capabilities = [
+  "Lead araştırma ve firma listesi çıkarma",
+  "Teknoloji, IT, finans ve kripto haber takibi",
+  "Viral içerik ve futbol analiz raporları",
+  "Tenant bazlı API key, model ve ajan yönetimi",
+  "Görev, kaynak ve prompt seviyesinde özelleştirme",
+  "Rapor arşivi, çalışma geçmişi ve manuel run akışı",
+];
+
+function packageLink(packageKey: string, loggedIn: boolean) {
+  if (loggedIn) {
+    return "/catalog";
   }
+
+  return `/login?next=%2Fcatalog&plan=${packageKey}`;
 }
 
-export default async function Home() {
+export default async function LandingPage() {
   const session = await getCurrentUser();
-  if (!session) redirect("/login");
-
-  const { agents, reports, runs, succeededCount, credentialCount, hasError } = await getDashboardData(session.user);
-  const activeAgents = agents.filter((agent) => agent.status === "ACTIVE").length;
-  const latestReport = reports[0];
-  const showSetupGuide = session.user.role === "OWNER_ADMIN" && agents.length === 0;
-  const setupSteps = [
-    { label: "API key ekle", done: credentialCount > 0, href: "/settings" },
-    { label: "Katalogu ac", done: false, href: "/catalog" },
-    { label: "Ilk ajani kur", done: agents.length > 0, href: "/catalog" },
-  ];
-
-  const now = new Date();
-  const timeStr = now.toLocaleString("tr-TR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const loggedIn = Boolean(session);
 
   return (
-    <div className="page-shell">
-      <AutoRefresh intervalMs={5000} />
-      <header className="page-header">
-        <p className="greeting">{session.user.companyName} · {timeStr}</p>
-        <h1>
-          Research <span>Automation</span>
-        </h1>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.brand}>
+          <img src="/uptexx-logo.png" alt="Uptexx" className={styles.logo} />
+          <div>
+            <strong>Uptexx Research Automation</strong>
+            <span>Yapay zeka destekli araştırma ve raporlama platformu</span>
+          </div>
+        </Link>
+
+        <div className={styles.headerActions}>
+          {loggedIn ? (
+            <Link href="/dashboard" className={styles.loginButton}>
+              Panele Git
+            </Link>
+          ) : (
+            <Link href="/login" className={styles.loginButton}>
+              Giriş Yap
+            </Link>
+          )}
+        </div>
       </header>
 
-      {hasError ? (
-        <div className="panel" style={{ marginBottom: "24px" }}>
-          <div className="panel-header">
-            <h3>Dashboard verileri yuklenemedi</h3>
-          </div>
-          <p className="empty-state">Veritabani baglantisini ve tenant yetkilerini kontrol edin.</p>
-        </div>
-      ) : null}
+      <main className={styles.main}>
+        <section className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <p className={styles.kicker}>Araştırmayı ekip işi olmaktan çıkaran operasyon katmanı</p>
+            <h1>Uptexx Research Automation, şirketler için katalog bazlı araştırma ajanları sunar.</h1>
+            <p className={styles.heroText}>
+              Sistem; satış fırsatlarını, teknoloji gündemini, finans verilerini, kripto sinyallerini ve içerik trendlerini
+              takip eden ajanları tek panelde yönetmeni sağlar. Her ajan kendi görevi, kaynağı, prompt yapısı ve rapor
+              çıktısıyla çalışır.
+            </p>
 
-      <div className="stats-grid">
-        <div className="stat-card accent" style={{ "--i": 0 } as React.CSSProperties}>
-          <p className="stat-label">Aktif Ajanlar</p>
-          <p className="stat-value">{activeAgents}</p>
-          <p className="stat-sub">{agents.length} toplam ajan</p>
-        </div>
-        <div className="stat-card" style={{ "--i": 1 } as React.CSSProperties}>
-          <p className="stat-label">Toplam Rapor</p>
-          <p className="stat-value">{reports.length > 0 ? reports.length + "+" : "0"}</p>
-          <p className="stat-sub">Tenant icinde</p>
-        </div>
-        <div className="stat-card" style={{ "--i": 2 } as React.CSSProperties}>
-          <p className="stat-label">Basarili Calisma</p>
-          <p className="stat-value">{succeededCount}</p>
-          <p className="stat-sub">Toplam tamamlanan</p>
-        </div>
-        <div className="stat-card" style={{ "--i": 3 } as React.CSSProperties}>
-          <p className="stat-label">Son Rapor</p>
-          <p className="stat-value" style={{ fontSize: "18px" }}>
-            {latestReport ? latestReport.createdAt.toLocaleDateString("tr-TR") : "—"}
-          </p>
-          <p className="stat-sub">{latestReport ? latestReport.agent.name : "Henuz rapor yok"}</p>
-        </div>
-      </div>
-
-      {showSetupGuide ? (
-        <section className={styles.setupPanel}>
-          <div className={styles.setupPanelHeader}>
-            <div>
-              <p className={styles.setupKicker}>Ilk Kurulum</p>
-              <h2>Ilk katalog ajanini kuralim</h2>
-              <p className={styles.setupCopy}>Siradaki hedef tek API key, tek ajan ve tek manuel run.</p>
-            </div>
-            <Link href={credentialCount > 0 ? "/catalog" : "/settings"} className="run-btn">
-              {credentialCount > 0 ? "Ajan Katalogunu Ac" : "Kuruluma Basla"}
-            </Link>
-          </div>
-
-          <div className={styles.setupChecklist}>
-            {setupSteps.map((step) => (
-              <Link
-                key={step.label}
-                href={step.href}
-                className={`${styles.setupStep} ${step.done ? styles.setupStepDone : ""}`}
-              >
-                <span className={styles.setupStepDot}>{step.done ? "✓" : "•"}</span>
-                <span>{step.label}</span>
+            <div className={styles.heroActions}>
+              <Link href={loggedIn ? "/catalog" : "/login?next=%2Fcatalog"} className={styles.primaryButton}>
+                Ajan Kataloğunu Aç
               </Link>
+              <a href="#pricing" className={styles.secondaryButton}>
+                Paketleri İncele
+              </a>
+            </div>
+          </div>
+
+          <div className={styles.heroPanel}>
+            <div className={styles.heroPanelTop}>
+              <span>Kurum içi araştırma akışı</span>
+              <strong>Tek panel, çok ajan</strong>
+            </div>
+
+            <div className={styles.heroStatGrid}>
+              <div className={styles.heroStatCard}>
+                <strong>Hazır katalog</strong>
+                <span>Lead, haber, finans, viral içerik, futbol analiz</span>
+              </div>
+              <div className={styles.heroStatCard}>
+                <strong>Tenant bazlı yapı</strong>
+                <span>Her müşterinin kendi API key, modeli ve ajan seti</span>
+              </div>
+              <div className={styles.heroStatCard}>
+                <strong>Rapor teslimi</strong>
+                <span>Özet, bulgular, PDF ve Excel dışa aktarma</span>
+              </div>
+              <div className={styles.heroStatCard}>
+                <strong>Custom genişleme</strong>
+                <span>Premium pakette şirketine özel ajan tasarımı</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeading}>
+            <p>Ne işe yarar</p>
+            <h2>Operasyon yükünü araştırma ajanlarına dağıtır.</h2>
+          </div>
+
+          <div className={styles.capabilityGrid}>
+            {capabilities.map((item) => (
+              <div key={item} className={styles.capabilityCard}>
+                <span className={styles.capabilityDot} />
+                <p>{item}</p>
+              </div>
             ))}
           </div>
         </section>
-      ) : null}
 
-      <section id="agents">
-        <div className="section-heading">
-          <h2>Ajanlar</h2>
-          <span className="section-badge">{agents.length} ajan</span>
-        </div>
+        <section className={styles.section}>
+          <div className={styles.sectionHeading}>
+            <p>Nasıl çalışır</p>
+            <h2>Kurulumdan rapora giden akış basit tutulur.</h2>
+          </div>
 
-        <div className="agents-grid">
-          {agents.map((agent, index) => {
-            const lastRun = agent.runs[0];
-            const isActive = agent.status === "ACTIVE";
+          <div className={styles.stepGrid}>
+            {steps.map((step, index) => (
+              <div key={step.title} className={styles.stepCard}>
+                <span className={styles.stepIndex}>0{index + 1}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-            return (
-              <div className="agent-card" key={agent.id} style={{ "--i": index } as React.CSSProperties}>
-                <div className="agent-card-header">
-                  <Link href={`/agents/${agent.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1 }}>
-                    <h3>{agent.name}</h3>
-                  </Link>
-                  <span className={`status-badge ${isActive ? "active" : "paused"}`}>
-                    <span className="status-dot" />
-                    {isActive ? "Aktif" : "Pasif"}
-                  </span>
+        <section id="pricing" className={styles.section}>
+          <div className={styles.sectionHeading}>
+            <p>Fiyatlandırma</p>
+            <h2>Paketini seç, katalog ajanlarını hemen kullanmaya başla.</h2>
+          </div>
+
+          <div className={styles.pricingGrid}>
+            {packages.map((pkg) => (
+              <article
+                key={pkg.key}
+                className={`${styles.pricingCard} ${pkg.featured ? styles.pricingCardFeatured : ""}`}
+              >
+                <div className={styles.pricingHead}>
+                  <div>
+                    <p className={styles.packageKey}>{pkg.key}</p>
+                    <h3>{pkg.name}</h3>
+                  </div>
+                  {pkg.featured ? <span className={styles.featuredBadge}>Önerilen</span> : null}
                 </div>
 
-                <Link href={`/agents/${agent.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  <p className="agent-desc">{agent.description}</p>
+                <p className={styles.packageDescription}>{pkg.description}</p>
+
+                <div className={styles.priceWrap}>
+                  <strong>{pkg.price}</strong>
+                  <span>{pkg.detail}</span>
+                </div>
+
+                <ul className={styles.featureList}>
+                  {pkg.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+
+                <Link href={packageLink(pkg.key, loggedIn)} className={styles.buyButton}>
+                  Satın Al
                 </Link>
-
-                <div className="agent-card-meta">
-                  <span className="meta-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12,6 12,12 16,14" />
-                    </svg>
-                    {agent.scheduleLabel || agent.cadence || "Plan yok"}
-                  </span>
-                </div>
-
-                <div className="agent-card-footer">
-                  <span className="last-run-info">
-                    {lastRun
-                      ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`
-                      : "Henuz calistirilmadi"}
-                  </span>
-                  <RunButton agentId={agent.id} disabled={!isActive || !agent.credentialId || !agent.modelName} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <div className="split-section" id="reports">
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Son Raporlar</h3>
-            <span className="count">{reports.length}</span>
+              </article>
+            ))}
           </div>
-          {reports.length === 0 ? (
-            <p className="empty-state">Henuz rapor olusmadi.</p>
-          ) : (
-            reports.map((report) => (
-              <div className="run-item" key={report.id}>
-                <span className="run-dot" style={{ background: "var(--accent)" }} />
-                <div className="run-info" style={{ flex: 1 }}>
-                  <Link href={`/reports/${report.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                    <p className="run-agent">{report.agent.name}</p>
-                    <p style={{ margin: "4px 0", color: "var(--text-primary)", fontWeight: 500 }}>{report.title}</p>
-                    <p className="run-meta">
-                      {report.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
-                      {report.triggeredBy ? ` · ${report.triggeredBy.name}` : ""}
-                    </p>
-                  </Link>
-                </div>
-                <div className="run-actions">{report.runId && <DeleteRunButton runId={report.runId} />}</div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="panel" id="run-log">
-          <div className="panel-header">
-            <h3>Calisma Gecmisi</h3>
-            <span className="count">{runs.length}</span>
-          </div>
-          {runs.length === 0 ? (
-            <p className="empty-state">Henuz calisma yok.</p>
-          ) : (
-            runs.map((run) => (
-              <div className="run-item" key={run.id}>
-                <span className={`run-dot ${run.status.toLowerCase()}`} />
-                <div className="run-info">
-                  <p className="run-agent">{run.agent.name}</p>
-                  <p className="run-meta">
-                    {run.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
-                    {run.triggeredBy ? ` · ${run.triggeredBy.name}` : ""}
-                  </p>
-                </div>
-                <span className={`run-status-tag ${run.status.toLowerCase()}`}>{run.status}</span>
-                <div className="run-actions">
-                  <DeleteRunButton runId={run.id} />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

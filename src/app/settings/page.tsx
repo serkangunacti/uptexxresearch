@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
-  if (session.user.role !== "OWNER_ADMIN") redirect("/");
+  if (session.user.role !== "OWNER_ADMIN") redirect("/dashboard");
 
   const credentials = await prisma.apiCredential.findMany({
       where: { companyId: session.user.companyId },

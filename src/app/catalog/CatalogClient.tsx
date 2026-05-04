@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import styles from "./catalog.module.css";
 
 type CatalogCard = {
   id: string;
@@ -15,6 +16,18 @@ type CatalogCard = {
   canInstall: boolean;
 };
 
+function originLabel(origin: CatalogCard["origin"]) {
+  if (origin === "TENANT_CUSTOM") return "Custom";
+  if (origin === "GLOBAL_CUSTOM") return "Global Custom";
+  return "Sistem";
+}
+
+function stateLabel(template: CatalogCard) {
+  if (template.lifecycle === "COMING_SOON") return "Yakında";
+  if (template.locked) return "Kilitli";
+  return "Hazır";
+}
+
 export function CatalogClient({
   packageName,
   allowsCustomAgentBuilder,
@@ -24,81 +37,72 @@ export function CatalogClient({
   allowsCustomAgentBuilder: boolean;
   templates: CatalogCard[];
 }) {
-  const categories = Array.from(new Set(templates.map((item) => item.category)));
-
   return (
-    <div style={{ display: "grid", gap: "28px" }}>
-      {!allowsCustomAgentBuilder ? (
-        <div className="setup-panel">
-          <div className="setup-panel-header">
-            <div>
-              <h3 style={{ marginBottom: "6px" }}>Bu pakette sistem ajanları açık</h3>
-              <p className="agent-section-copy" style={{ marginBottom: 0 }}>
-                Şu an {packageName} paketindesin. Custom ajan oluşturma yalnızca Premium pakette açılır.
-              </p>
-            </div>
-          </div>
+    <div className={styles.catalogWrap}>
+      <section className={styles.summaryPanel}>
+        <div>
+          <p className={styles.summaryKicker}>Aktif paket</p>
+          <h2>{packageName}</h2>
+          <p className={styles.summaryText}>
+            Hazır ajanlar eşit kart düzeninde listelenir. Kilitli ajanlar da görünür, ama yalnızca açık olanlar kurulabilir.
+          </p>
         </div>
-      ) : null}
 
-      {categories.map((category) => {
-        const items = templates.filter((template) => template.category === category);
-        return (
-          <section key={category}>
-            <div className="section-heading">
-              <h2>{category}</h2>
-              <span className="section-badge">{items.length} ajan</span>
+        {!allowsCustomAgentBuilder ? (
+          <div className={styles.summaryNote}>
+            <strong>Custom builder kapalı</strong>
+            <span>Premium pakette kendi ajan şablonunu oluşturabilirsin.</span>
+          </div>
+        ) : (
+          <div className={styles.summaryNote}>
+            <strong>Custom builder açık</strong>
+            <span>İstersen kendi tenantına özel ajanlar da oluşturabilirsin.</span>
+          </div>
+        )}
+      </section>
+
+      <section className={styles.grid}>
+        {templates.map((template) => (
+          <article key={template.id} className={styles.card}>
+            <div className={styles.cardTop}>
+              <span className={`${styles.stateBadge} ${template.locked || template.lifecycle === "COMING_SOON" ? styles.stateMuted : styles.stateReady}`}>
+                {stateLabel(template)}
+              </span>
+              <span className={styles.categoryBadge}>{template.category}</span>
             </div>
 
-            <div className="agents-grid">
-              {items.map((template, index) => (
-                <div className="agent-card" key={template.id} style={{ "--i": index } as React.CSSProperties}>
-                  <div className="agent-card-header">
-                    <h3>{template.name}</h3>
-                    <span className={`status-badge ${template.lifecycle === "COMING_SOON" ? "paused" : template.accessible ? "active" : "paused"}`}>
-                      <span className="status-dot" />
-                      {template.lifecycle === "COMING_SOON" ? "Yakında" : template.accessible ? "Açık" : "Kilitli"}
-                    </span>
-                  </div>
-
-                  <p className="agent-desc">{template.description}</p>
-
-                  <div className="agent-card-meta">
-                    <span className="meta-badge">{template.requiredPackageName || "Genel erişim"}</span>
-                    <span className="meta-badge">
-                      {template.origin === "TENANT_CUSTOM"
-                        ? "Custom"
-                        : template.origin === "GLOBAL_CUSTOM"
-                          ? "Global Custom"
-                          : "Sistem"}
-                    </span>
-                  </div>
-
-                  <div className="agent-card-footer">
-                    <span className="last-run-info">
-                      {template.lifecycle === "COMING_SOON"
-                        ? "İkinci fazda açılacak"
-                        : template.locked
-                          ? "Bu paketle aktif değil"
-                          : "Kuruluma hazır"}
-                    </span>
-
-                    {template.canInstall ? (
-                      <Link href={`/catalog/${template.id}`} className="run-btn" style={{ textDecoration: "none" }}>
-                        Kur
-                      </Link>
-                    ) : (
-                      <button className="run-btn" disabled>
-                        {template.lifecycle === "COMING_SOON" ? "Yakında" : "Kilitli"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className={styles.cardBody}>
+              <h3>{template.name}</h3>
+              <p>{template.description}</p>
             </div>
-          </section>
-        );
-      })}
+
+            <div className={styles.metaRow}>
+              <span>{template.requiredPackageName || "Genel erişim"}</span>
+              <span>{originLabel(template.origin)}</span>
+            </div>
+
+            <div className={styles.cardFooter}>
+              <span className={styles.helperText}>
+                {template.lifecycle === "COMING_SOON"
+                  ? "Bu ajan sonraki fazda açılacak."
+                  : template.locked
+                    ? "Paket yükselterek açabilirsin."
+                    : "Kuruluma hazır."}
+              </span>
+
+              {template.canInstall ? (
+                <Link href={`/catalog/${template.id}`} className={styles.installButton}>
+                  Kur
+                </Link>
+              ) : (
+                <button className={styles.installButton} disabled>
+                  {template.lifecycle === "COMING_SOON" ? "Yakında" : "Kilitli"}
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+      </section>
     </div>
   );
 }
