@@ -9,13 +9,13 @@ const findingSchema = z.object({
   body: z.string().min(1),
   sourceUrl: z.string().url().optional(),
   score: z.number().int().min(0).max(100).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const reportSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
-  findings: z.array(findingSchema).min(1)
+  findings: z.array(findingSchema).min(1),
 });
 
 type AgentContext = {
@@ -24,6 +24,7 @@ type AgentContext = {
   defaultPrompt: string;
   modelProvider: ProviderKind | null;
   modelName: string | null;
+  outputSchema?: unknown;
 };
 
 type TaskContext = {
@@ -48,17 +49,17 @@ export async function generateReportWithProvider(
   }
 
   const sourceBlock = sources
-    .map((source, index) => {
-      return [
+    .map((source, index) =>
+      [
         `#${index + 1}`,
         `Title: ${source.title}`,
         `URL: ${source.url}`,
         source.publishedAt ? `PublishedAt: ${source.publishedAt}` : "",
-        `Snippet: ${source.snippet || "No snippet"}`
+        `Snippet: ${source.snippet || "No snippet"}`,
       ]
         .filter(Boolean)
-        .join("\n");
-    })
+        .join("\n")
+    )
     .join("\n\n");
 
   const taskBlock = tasks.length
@@ -68,8 +69,7 @@ export async function generateReportWithProvider(
   const messages = [
     {
       role: "system" as const,
-      content:
-        "You are a disciplined multi-tenant research analyst. Return only valid JSON. Do not include markdown fences."
+      content: "You are a disciplined multi-tenant research analyst. Return only valid JSON. Do not include markdown fences.",
     },
     {
       role: "user" as const,
@@ -87,14 +87,15 @@ export async function generateReportWithProvider(
         "- Do not repeat old findings or duplicate URLs.",
         "- Every finding must include sourceUrl when available.",
         "- Do not invent facts, prices, people, phone numbers, or links.",
+        buildOutputRequirement(agent.outputSchema),
         "",
         "Return JSON with this shape:",
-        "{\"title\":\"...\",\"summary\":\"...\",\"findings\":[{\"kind\":\"LEAD|OPPORTUNITY|NEWS|MARKET_SIGNAL|SYSTEM\",\"title\":\"...\",\"body\":\"...\",\"sourceUrl\":\"https://...\",\"score\":0}]}",
+        "{\"title\":\"...\",\"summary\":\"...\",\"findings\":[{\"kind\":\"LEAD|OPPORTUNITY|NEWS|MARKET_SIGNAL|SYSTEM\",\"title\":\"...\",\"body\":\"...\",\"sourceUrl\":\"https://...\",\"score\":0,\"metadata\":{\"field\":\"value\"}}]}",
         "",
         "Sources:",
-        sourceBlock || "No live sources returned."
-      ].join("\n")
-    }
+        sourceBlock || "No live sources returned.",
+      ].join("\n"),
+    },
   ];
 
   const raw = await completeWithProvider(credential, agent.modelName, messages);
@@ -104,6 +105,8 @@ export async function generateReportWithProvider(
   if (!validated.success) {
     throw new Error("Model JSON çıktısı doğrulanamadı.");
   }
+
+  validateOutputSchema(agent.outputSchema, validated.data);
 
   return validated.data;
 }
@@ -134,6 +137,7 @@ async function completeWithOpenAICompatible(
     model: modelName,
     temperature: 0.2,
     messages,
+    response_format: { type: "json_object" } as never,
   });
   return response.choices[0]?.message?.content ?? "";
 }
@@ -144,7 +148,10 @@ async function completeWithAnthropic(
   messages: { role: "system" | "user"; content: string }[]
 ) {
   const systemPrompt = messages.find((message) => message.role === "system")?.content ?? "";
-  const userPrompt = messages.filter((message) => message.role === "user").map((message) => message.content).join("\n\n");
+  const userPrompt = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .join("\n\n");
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -204,8 +211,75 @@ async function completeWithGemini(
 
 function safeParseJson(content: string) {
   const withoutThink = content.replace(/<think>[\s\S]*?<\/think>/g, "");
-  const trimmed = withoutThink.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-  return JSON.parse(trimmed);
+  const trimmed = withoutThink.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+      return JSON.parse(candidate);
+    }
+
+    throw new Error("JSON_PARSE_FAILED");
+  }
+}
+
+function buildOutputRequirement(outputSchema: unknown) {
+  if (!isRecord(outputSchema)) return "";
+
+  const findingKind = typeof outputSchema.findingKind === "string" ? outputSchema.findingKind : "";
+  const requiredFields = Array.isArray(outputSchema.requiredMetadataFields)
+    ? outputSchema.requiredMetadataFields.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+
+  const instructions: string[] = [];
+
+  if (findingKind) {
+    instructions.push(`- Use finding kind "${findingKind}" for all main findings unless there is a system error.`);
+  }
+
+  if (requiredFields.length > 0) {
+    instructions.push(`- Every finding must include metadata with non-empty keys: ${requiredFields.join(", ")}.`);
+  }
+
+  return instructions.join("\n");
+}
+
+function validateOutputSchema(outputSchema: unknown, report: GeneratedReport) {
+  if (!isRecord(outputSchema)) return;
+
+  const findingKind = typeof outputSchema.findingKind === "string" ? outputSchema.findingKind : "";
+  const requiredFields = Array.isArray(outputSchema.requiredMetadataFields)
+    ? outputSchema.requiredMetadataFields.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+
+  for (const finding of report.findings) {
+    if (findingKind && finding.kind !== findingKind) {
+      throw new Error("TEMPLATE_OUTPUT_KIND_INVALID");
+    }
+
+    if (requiredFields.length === 0) continue;
+
+    const metadata = isRecord(finding.metadata) ? finding.metadata : null;
+    if (!metadata) {
+      throw new Error("TEMPLATE_OUTPUT_METADATA_MISSING");
+    }
+
+    for (const field of requiredFields) {
+      const value = metadata[field];
+      if (typeof value !== "string" || !value.trim()) {
+        throw new Error("TEMPLATE_OUTPUT_METADATA_MISSING");
+      }
+    }
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function fallbackSystemReport(note: string): GeneratedReport {

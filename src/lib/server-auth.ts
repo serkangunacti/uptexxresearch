@@ -127,6 +127,7 @@ function toSessionUser(user: {
   email: string;
   name: string;
   role: UserRole;
+  isPlatformAdmin: boolean;
   companyId: string;
   company: { name: string };
 }): SessionUser {
@@ -136,6 +137,7 @@ function toSessionUser(user: {
     email: user.email,
     name: user.name,
     role: user.role,
+    isPlatformAdmin: user.isPlatformAdmin,
     companyName: user.company.name,
   };
 }

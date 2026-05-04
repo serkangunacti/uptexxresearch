@@ -11,20 +11,7 @@ export default async function SettingsPage() {
   if (!session) redirect("/login");
   if (session.user.role !== "OWNER_ADMIN") redirect("/");
 
-  const [users, credentials, tasks] = await Promise.all([
-    prisma.user.findMany({
-      where: { companyId: session.user.companyId },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        lastLoginAt: true,
-        createdAt: true,
-      },
-    }),
-    prisma.apiCredential.findMany({
+  const credentials = await prisma.apiCredential.findMany({
       where: { companyId: session.user.companyId },
       orderBy: { createdAt: "desc" },
       select: {
@@ -39,12 +26,7 @@ export default async function SettingsPage() {
         createdAt: true,
         lastUsedAt: true,
       },
-    }),
-    prisma.task.findMany({
-      where: { companyId: session.user.companyId },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-    }),
-  ]);
+    });
 
   return (
     <div className="page-shell">
@@ -53,9 +35,7 @@ export default async function SettingsPage() {
         <p className="greeting">{session.user.companyName} tenant yönetimi</p>
       </header>
       <SettingsClient
-        users={users}
         credentials={credentials}
-        tasks={tasks}
         providers={getProviderCatalog()}
       />
     </div>

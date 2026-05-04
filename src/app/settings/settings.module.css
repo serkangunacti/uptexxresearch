@@ -1,0 +1,442 @@
+.shell {
+  display: grid;
+  gap: 22px;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+}
+
+.heroKicker {
+  margin: 0 0 10px;
+  color: rgba(191, 219, 254, 0.82);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heroCopy {
+  max-width: 520px;
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summaryCard {
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.summaryLabel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summaryValue {
+  margin: 10px 0 6px;
+  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.summarySub {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.tab:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.tabActive {
+  border-color: rgba(96, 165, 250, 0.34);
+  background: rgba(59, 130, 246, 0.14);
+  color: #dbeafe;
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.sectionStack {
+  display: grid;
+  gap: 18px;
+}
+
+.card {
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.03);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.sectionBar h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.sectionBar p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.sectionBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+}
+
+.infoCard,
+.collapsedState,
+.formCard {
+  margin: 0 22px 22px;
+  border-radius: 20px;
+}
+
+.infoCard {
+  padding: 16px 18px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.infoTitle {
+  margin: 0 0 6px;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.infoText {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.collapsedState {
+  padding: 16px 18px;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.formCard {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.015));
+}
+
+.formIntro {
+  display: grid;
+  gap: 6px;
+  margin: 22px 22px 0;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.formIntroTitle {
+  margin: 0;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.formIntroText {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px 0;
+}
+
+.fieldGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  align-content: start;
+}
+
+.field input,
+.field textarea,
+.field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: inherit;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 132px;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.fieldHelp {
+  min-height: 18px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.advancedArea {
+  display: grid;
+  gap: 14px;
+  margin: 12px 22px 0;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.advancedToggleRow {
+  display: flex;
+  justify-content: flex-start;
+  padding: 4px 22px 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 22px 22px;
+}
+
+.feedbackCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 22px 22px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.feedbackLabel {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.feedbackValue {
+  margin: 0;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.list {
+  display: grid;
+  padding: 8px 0 0;
+}
+
+.listItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+}
+
+.listItemStack {
+  align-items: stretch;
+}
+
+.listCopy {
+  min-width: 0;
+  flex: 1;
+}
+
+.listTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.listTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.listMeta {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.listSubmeta {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.listSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rolePill,
+.miniPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.secondaryBtn,
+.dangerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.secondaryBtn:hover,
+.dangerBtn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.dangerBtn {
+  border-color: rgba(248, 113, 113, 0.24);
+  color: #fecaca;
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .sectionBar,
+  .feedbackCard,
+  .listItem {
+    flex-direction: column;
+  }
+
+  .summaryGrid,
+  .fieldGridTwo {
+    grid-template-columns: 1fr;
+  }
+
+  .listSide {
+    align-items: flex-start;
+  }
+
+  .cardActions {
+    justify-content: stretch;
+  }
+}

@@ -7,12 +7,13 @@ import { RunButton } from "./RunButton";
 import { DeleteRunButton } from "./DeleteRunButton";
 import { AutoRefresh } from "./AutoRefresh";
 import type { SessionUser } from "@/lib/types";
+import styles from "./emptyStates.module.css";
 
 export const dynamic = "force-dynamic";
 
 async function getDashboardData(user: SessionUser) {
   try {
-    const [agents, reports, runs, succeededCount] = await Promise.all([
+    const [agents, reports, runs, succeededCount, credentialCount] = await Promise.all([
       getVisibleAgentsForUser(user),
       prisma.report.findMany({
         where: { companyId: user.companyId },
@@ -27,12 +28,13 @@ async function getDashboardData(user: SessionUser) {
         include: { agent: true, triggeredBy: true },
       }),
       prisma.agentRun.count({ where: { companyId: user.companyId, status: "SUCCEEDED" } }),
+      prisma.apiCredential.count({ where: { companyId: user.companyId, isActive: true } }),
     ]);
 
-    return { agents, reports, runs, succeededCount, hasError: false };
+    return { agents, reports, runs, succeededCount, credentialCount, hasError: false };
   } catch (error) {
     console.error("Dashboard data load failed:", error);
-    return { agents: [], reports: [], runs: [], succeededCount: 0, hasError: true };
+    return { agents: [], reports: [], runs: [], succeededCount: 0, credentialCount: 0, hasError: true };
   }
 }
 
@@ -40,9 +42,15 @@ export default async function Home() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
 
-  const { agents, reports, runs, succeededCount, hasError } = await getDashboardData(session.user);
+  const { agents, reports, runs, succeededCount, credentialCount, hasError } = await getDashboardData(session.user);
   const activeAgents = agents.filter((agent) => agent.status === "ACTIVE").length;
   const latestReport = reports[0];
+  const showSetupGuide = session.user.role === "OWNER_ADMIN" && agents.length === 0;
+  const setupSteps = [
+    { label: "API key ekle", done: credentialCount > 0, href: "/settings" },
+    { label: "Katalogu ac", done: false, href: "/catalog" },
+    { label: "Ilk ajani kur", done: agents.length > 0, href: "/catalog" },
+  ];
 
   const now = new Date();
   const timeStr = now.toLocaleString("tr-TR", {
@@ -65,9 +73,9 @@ export default async function Home() {
       {hasError ? (
         <div className="panel" style={{ marginBottom: "24px" }}>
           <div className="panel-header">
-            <h3>Dashboard verileri yüklenemedi</h3>
+            <h3>Dashboard verileri yuklenemedi</h3>
           </div>
-          <p className="empty-state">Veritabanı bağlantısını ve tenant yetkilerini kontrol edin.</p>
+          <p className="empty-state">Veritabani baglantisini ve tenant yetkilerini kontrol edin.</p>
         </div>
       ) : null}
 
@@ -80,10 +88,10 @@ export default async function Home() {
         <div className="stat-card" style={{ "--i": 1 } as React.CSSProperties}>
           <p className="stat-label">Toplam Rapor</p>
           <p className="stat-value">{reports.length > 0 ? reports.length + "+" : "0"}</p>
-          <p className="stat-sub">Tenant içinde</p>
+          <p className="stat-sub">Tenant icinde</p>
         </div>
         <div className="stat-card" style={{ "--i": 2 } as React.CSSProperties}>
-          <p className="stat-label">Başarılı Çalışma</p>
+          <p className="stat-label">Basarili Calisma</p>
           <p className="stat-value">{succeededCount}</p>
           <p className="stat-sub">Toplam tamamlanan</p>
         </div>
@@ -92,9 +100,37 @@ export default async function Home() {
           <p className="stat-value" style={{ fontSize: "18px" }}>
             {latestReport ? latestReport.createdAt.toLocaleDateString("tr-TR") : "—"}
           </p>
-          <p className="stat-sub">{latestReport ? latestReport.agent.name : "Henüz rapor yok"}</p>
+          <p className="stat-sub">{latestReport ? latestReport.agent.name : "Henuz rapor yok"}</p>
         </div>
       </div>
+
+      {showSetupGuide ? (
+        <section className={styles.setupPanel}>
+          <div className={styles.setupPanelHeader}>
+            <div>
+              <p className={styles.setupKicker}>Ilk Kurulum</p>
+              <h2>Ilk katalog ajanini kuralim</h2>
+              <p className={styles.setupCopy}>Siradaki hedef tek API key, tek ajan ve tek manuel run.</p>
+            </div>
+            <Link href={credentialCount > 0 ? "/catalog" : "/settings"} className="run-btn">
+              {credentialCount > 0 ? "Ajan Katalogunu Ac" : "Kuruluma Basla"}
+            </Link>
+          </div>
+
+          <div className={styles.setupChecklist}>
+            {setupSteps.map((step) => (
+              <Link
+                key={step.label}
+                href={step.href}
+                className={`${styles.setupStep} ${step.done ? styles.setupStepDone : ""}`}
+              >
+                <span className={styles.setupStepDot}>{step.done ? "✓" : "•"}</span>
+                <span>{step.label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section id="agents">
         <div className="section-heading">
@@ -137,7 +173,7 @@ export default async function Home() {
                   <span className="last-run-info">
                     {lastRun
                       ? `Son: ${lastRun.createdAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`
-                      : "Henüz çalıştırılmadı"}
+                      : "Henuz calistirilmadi"}
                   </span>
                   <RunButton agentId={agent.id} disabled={!isActive || !agent.credentialId || !agent.modelName} />
                 </div>
@@ -154,7 +190,7 @@ export default async function Home() {
             <span className="count">{reports.length}</span>
           </div>
           {reports.length === 0 ? (
-            <p className="empty-state">Henüz rapor oluşmadı.</p>
+            <p className="empty-state">Henuz rapor olusmadi.</p>
           ) : (
             reports.map((report) => (
               <div className="run-item" key={report.id}>
@@ -177,11 +213,11 @@ export default async function Home() {
 
         <div className="panel" id="run-log">
           <div className="panel-header">
-            <h3>Çalışma Geçmişi</h3>
+            <h3>Calisma Gecmisi</h3>
             <span className="count">{runs.length}</span>
           </div>
           {runs.length === 0 ? (
-            <p className="empty-state">Henüz çalışma yok.</p>
+            <p className="empty-state">Henuz calisma yok.</p>
           ) : (
             runs.map((run) => (
               <div className="run-item" key={run.id}>

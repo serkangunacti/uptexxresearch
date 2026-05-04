@@ -12,6 +12,7 @@ export async function executeAgentRun(agentId: string, runId: string) {
           tasks: { include: { task: true }, orderBy: { sortOrder: "asc" } },
           rule: true,
           credential: true,
+          template: true,
         },
       },
       triggeredBy: true,
@@ -58,6 +59,7 @@ export async function executeAgentRun(agentId: string, runId: string) {
         defaultPrompt: agent.defaultPrompt,
         modelProvider: agent.modelProvider,
         modelName: agent.modelName,
+        outputSchema: agent.template?.outputSchema ?? {},
       },
       agent.tasks.map((item) => ({
         name: item.task.name,

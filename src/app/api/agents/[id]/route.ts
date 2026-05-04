@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getAgentForUser } from "@/lib/access";
+import { enforceActiveAgentLimit, requireCompanySubscription } from "@/lib/catalog";
 import { requireUser } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const nextIntervalDays = body.intervalDays ? Number(body.intervalDays) : null;
     const nextDaysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : null;
     const nextSearchQueries = parseList(body.searchQueries);
+    const nextStatus = body.status === "PAUSED" ? "PAUSED" : "ACTIVE";
+
+    if (nextStatus === "ACTIVE") {
+      const subscription = await requireCompanySubscription(session.user.companyId);
+      await enforceActiveAgentLimit(session.user.companyId, subscription.package.activeAgentLimit, agent.id);
+    }
 
     await prisma.agent.update({
       where: { id: agent.id },
@@ -48,7 +55,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         searchQueries:
           nextSearchQueries ??
           (agent.searchQueries === null ? Prisma.JsonNull : (agent.searchQueries as Prisma.InputJsonValue)),
-        status: body.status === "PAUSED" ? "PAUSED" : "ACTIVE",
+        status: nextStatus,
         modelProvider: body.modelProvider || null,
         modelName: body.modelName ? String(body.modelName) : null,
         credentialId,
@@ -123,6 +130,39 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }
       }
     }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await requireUser("OWNER_ADMIN");
+    const { id } = await context.params;
+    const agent = await getAgentForUser(session.user, id, "manage");
+
+    await prisma.$transaction(async (tx) => {
+      const reports = await tx.report.findMany({
+        where: { agentId: agent.id },
+        select: { id: true },
+      });
+
+      if (reports.length > 0) {
+        await tx.reportFinding.deleteMany({
+          where: { reportId: { in: reports.map((report) => report.id) } },
+        });
+      }
+
+      await tx.report.deleteMany({ where: { agentId: agent.id } });
+      await tx.agentRun.deleteMany({ where: { agentId: agent.id } });
+      await tx.agentAssignment.deleteMany({ where: { agentId: agent.id } });
+      await tx.agentTask.deleteMany({ where: { agentId: agent.id } });
+      await tx.agentSchedule.deleteMany({ where: { agentId: agent.id } });
+      await tx.agentRule.deleteMany({ where: { agentId: agent.id } });
+      await tx.agent.delete({ where: { id: agent.id } });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

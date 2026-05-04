@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { requireCompanySubscription } from "@/lib/catalog";
 import { getCurrentUser } from "@/lib/server-auth";
-import { getModelOptionsForCredential } from "@/lib/providers";
-import { AgentEditorClient } from "../AgentEditorClient";
+import { TemplateBuilderClient } from "@/app/catalog/TemplateBuilderClient";
 
 export const dynamic = "force-dynamic";
 
@@ -11,70 +10,22 @@ export default async function NewAgentPage() {
   if (!session) redirect("/login");
   if (session.user.role !== "OWNER_ADMIN") redirect("/agents");
 
-  const [templates, tasks, users, credentials] = await Promise.all([
-    prisma.agentTemplate.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] }),
-    prisma.task.findMany({
-      where: { companyId: session.user.companyId },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-    }),
-    prisma.user.findMany({
-      where: { companyId: session.user.companyId },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, email: true, role: true },
-    }),
-    prisma.apiCredential.findMany({
-      where: { companyId: session.user.companyId, isActive: true },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const subscription = await requireCompanySubscription(session.user.companyId);
+  if (!subscription.package.allowsCustomAgentBuilder) redirect("/catalog");
 
   return (
     <div className="page-shell">
       <header className="page-header">
-        <h1>Yeni Ajan</h1>
+        <h1>Custom Ajan Oluştur</h1>
+        <p className="greeting">Bu ekran yalnızca Premium pakette açılır.</p>
       </header>
-      <AgentEditorClient
-        mode="create"
-        agent={{
-          slug: "",
-          name: "",
-          description: "",
-          defaultPrompt: "",
-          searchQueries: [],
-          status: "ACTIVE",
-          modelProvider: null,
-          modelName: null,
-          credentialId: null,
-          taskIds: [],
-          assignmentUserIds: [],
-          schedule: {
-            timezone: "Europe/Istanbul",
-            hour: 9,
-            minute: 0,
-            intervalDays: null,
-            daysOfWeek: [],
-            isActive: true,
-          },
-          rule: {
-            preventDuplicates: true,
-            maxRunsPerDay: 1,
-            maxRunsPerWeek: 7,
-            maxSourceAgeDays: 7,
-            dedupeLookbackDays: 7,
-          },
-        }}
-        templates={templates}
-        tasks={tasks}
-        users={users}
-        credentials={credentials.map((credential) => ({
-          id: credential.id,
-          label: credential.label,
-          provider: credential.provider,
-          planType: credential.planType,
-          maskedKeyPreview: credential.maskedKeyPreview,
-          models: getModelOptionsForCredential(credential),
-        }))}
-        canAssignUsers
+
+      <TemplateBuilderClient
+        title="Tenant Custom Ajan"
+        description="Kendi tenantına özel katalog ajanı oluştur. Kaydettikten sonra Ajan Kataloğu içinde seçilebilir hale gelir."
+        endpoint="/api/custom-templates"
+        submitLabel="Custom Ajanı Kaydet"
+        successPath="/catalog"
       />
     </div>
   );

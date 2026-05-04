@@ -1,14 +1,18 @@
 import Link from "next/link";
-import { getVisibleAgentsForUser } from "@/lib/access";
-import { getCurrentUser } from "@/lib/server-auth";
 import { redirect } from "next/navigation";
+import { getVisibleAgentsForUser } from "@/lib/access";
+import { requireCompanySubscription } from "@/lib/catalog";
+import { getCurrentUser } from "@/lib/server-auth";
 import { RunButton } from "../RunButton";
+import styles from "../emptyStates.module.css";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgentsPage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
+
+  const subscription = await requireCompanySubscription(session.user.companyId);
 
   let agents: Awaited<ReturnType<typeof getVisibleAgentsForUser>> = [];
   let hasError = false;
@@ -24,12 +28,17 @@ export default async function AgentsPage() {
     <div className="page-shell">
       <header className="page-header">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-          <h1>Tüm Ajanlar</h1>
-          {session.user.role === "OWNER_ADMIN" ? (
-            <Link href="/agents/new" className="run-btn" style={{ textDecoration: "none" }}>
-              Yeni Ajan
+          <h1>Ajanlarım</h1>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Link href="/catalog" className="secondary-btn" style={{ textDecoration: "none" }}>
+              Ajan Kataloğu
             </Link>
-          ) : null}
+            {session.user.role === "OWNER_ADMIN" && subscription.package.allowsCustomAgentBuilder ? (
+              <Link href="/agents/new" className="run-btn" style={{ textDecoration: "none" }}>
+                Custom Ajan Oluştur
+              </Link>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -39,6 +48,27 @@ export default async function AgentsPage() {
             <h3>Ajanlar yüklenemedi</h3>
           </div>
           <p className="empty-state">Veritabanı bağlantısını ve tenant yetkilerini kontrol edin.</p>
+        </div>
+      ) : null}
+
+      {!hasError && agents.length === 0 ? (
+        <div className={styles.setupPanel} style={{ marginTop: "2rem", marginBottom: "2rem" }}>
+          <div className={styles.setupPanelHeader}>
+            <div>
+              <p className={styles.setupKicker}>Ajanlarım</p>
+              <h2>Henüz aktif ajan yok</h2>
+              <p className={styles.setupCopy}>
+                {session.user.role === "OWNER_ADMIN"
+                  ? "Önce katalogdan tek bir ajan kuralım ve manuel run ile akışı doğrulayalım."
+                  : "Bu tenant için size atanmış bir ajan henüz bulunmuyor."}
+              </p>
+            </div>
+            {session.user.role === "OWNER_ADMIN" ? (
+              <Link href="/catalog" className="run-btn" style={{ textDecoration: "none" }}>
+                Ajan Kataloğunu Aç
+              </Link>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

@@ -45,6 +45,31 @@ enum ProviderKind {
   CUSTOM_OPENAI
 }
 
+enum TemplateOrigin {
+  SYSTEM
+  GLOBAL_CUSTOM
+  TENANT_CUSTOM
+}
+
+enum TemplateLifecycle {
+  ACTIVE
+  COMING_SOON
+  DRAFT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELED
+}
+
+enum PackageKey {
+  FREE
+  BASIC
+  PRO
+  PREMIUM
+}
+
 model Company {
   id          String          @id @default(cuid())
   name        String
@@ -62,6 +87,8 @@ model Company {
   schedules   AgentSchedule[]
   rules       AgentRule[]
   logs        AuditLog[]
+  templates   AgentTemplate[]
+  subscriptions CompanySubscription[]
 }
 
 model User {
@@ -70,6 +97,7 @@ model User {
   email           String            @unique
   name            String
   role            UserRole
+  isPlatformAdmin Boolean           @default(false)
   passwordHash    String?
   passwordSetAt   DateTime?
   lastLoginAt     DateTime?
@@ -142,6 +170,7 @@ model ApiCredential {
 
 model AgentTemplate {
   id                 String       @id
+  companyId          String?
   name               String
   category           String
   description        String
@@ -149,10 +178,23 @@ model AgentTemplate {
   defaultQueries     Json
   defaultTasks       Json
   defaultSchedule    Json
+  defaultRule        Json?
   suggestedProvider  ProviderKind?
+  origin             TemplateOrigin    @default(SYSTEM)
+  lifecycle          TemplateLifecycle @default(ACTIVE)
+  isSelectable       Boolean           @default(true)
+  configSchema       Json              @default("[]")
+  sourceCatalog      Json              @default("[]")
+  taskBlueprints     Json              @default("[]")
+  outputSchema       Json              @default("{}")
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
+  company            Company?     @relation(fields: [companyId], references: [id])
   agents             Agent[]
+  packageLinks       PlanPackageAgentTemplate[]
+
+  @@index([companyId, origin, lifecycle])
+  @@index([origin, lifecycle])
 }
 
 model Task {
@@ -184,6 +226,7 @@ model Agent {
   scheduleLabel   String?
   defaultPrompt   String
   searchQueries   Json              @default("[]")
+  config          Json              @default("{}")
   modelProvider   ProviderKind?
   modelName       String?
   status          AgentStatus       @default(ACTIVE)
@@ -201,6 +244,50 @@ model Agent {
 
   @@unique([companyId, slug])
   @@index([companyId, status])
+}
+
+model PlanPackage {
+  id                        String                   @id @default(cuid())
+  key                       PackageKey               @unique
+  name                      String
+  monthlyPrice              Int
+  currency                  String                   @default("USD")
+  activeAgentLimit          Int
+  allowsCustomAgentBuilder  Boolean                  @default(false)
+  sortOrder                 Int
+  isActive                  Boolean                  @default(true)
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  templateLinks             PlanPackageAgentTemplate[]
+  subscriptions             CompanySubscription[]
+}
+
+model PlanPackageAgentTemplate {
+  id         String        @id @default(cuid())
+  packageId  String
+  templateId String
+  createdAt  DateTime      @default(now())
+  package    PlanPackage   @relation(fields: [packageId], references: [id])
+  template   AgentTemplate @relation(fields: [templateId], references: [id])
+
+  @@unique([packageId, templateId])
+  @@index([templateId])
+}
+
+model CompanySubscription {
+  id         String             @id @default(cuid())
+  companyId   String
+  packageId   String
+  status      SubscriptionStatus @default(ACTIVE)
+  startedAt   DateTime           @default(now())
+  endsAt      DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  company     Company            @relation(fields: [companyId], references: [id])
+  package     PlanPackage        @relation(fields: [packageId], references: [id])
+
+  @@unique([companyId])
+  @@index([packageId, status])
 }
 
 model AgentAssignment {

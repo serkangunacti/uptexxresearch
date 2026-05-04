@@ -1,4 +1,11 @@
-import type { FindingKind, ProviderKind, UserRole } from "@prisma/client";
+import type {
+  FindingKind,
+  PackageKey,
+  ProviderKind,
+  TemplateLifecycle,
+  TemplateOrigin,
+  UserRole,
+} from "@prisma/client";
 
 export type SearchResult = {
   title: string;
@@ -24,10 +31,36 @@ export type GeneratedReport = {
 };
 
 export type TemplateTaskSeed = {
+  key?: string;
   name: string;
   category: string;
   description: string;
   instruction: string;
+  defaultSelected?: boolean;
+};
+
+export type CatalogSourceSeed = {
+  key: string;
+  label: string;
+  description: string;
+  queryHint?: string;
+  defaultSelected?: boolean;
+};
+
+export type TemplateConfigFieldSeed = {
+  key: string;
+  label: string;
+  type: "text" | "textarea";
+  placeholder?: string;
+  helpText?: string;
+  required?: boolean;
+  defaultValue?: string;
+};
+
+export type TemplateOutputSchemaSeed = {
+  findingKind?: FindingKind;
+  requiredMetadataFields?: string[];
+  metadataLabels?: Record<string, string>;
 };
 
 export type TemplateScheduleSeed = {
@@ -48,6 +81,7 @@ export type TemplateRuleSeed = {
 
 export type AgentTemplateSeed = {
   id: string;
+  companyId?: string | null;
   name: string;
   category: string;
   description: string;
@@ -57,6 +91,14 @@ export type AgentTemplateSeed = {
   defaultSchedule: TemplateScheduleSeed;
   defaultRule: TemplateRuleSeed;
   suggestedProvider: ProviderKind;
+  origin?: TemplateOrigin;
+  lifecycle?: TemplateLifecycle;
+  isSelectable?: boolean;
+  configSchema?: TemplateConfigFieldSeed[];
+  sourceCatalog?: CatalogSourceSeed[];
+  taskBlueprints?: TemplateTaskSeed[];
+  outputSchema?: TemplateOutputSchemaSeed;
+  visibilityPackageKey?: PackageKey | null;
 };
 
 export type DefaultAgentSeed = {
@@ -91,5 +133,17 @@ export type SessionUser = {
   email: string;
   name: string;
   role: UserRole;
+  isPlatformAdmin: boolean;
   companyName: string;
+};
+
+export type PlanPackageSeed = {
+  key: PackageKey;
+  name: string;
+  monthlyPrice: number;
+  currency: string;
+  activeAgentLimit: number;
+  allowsCustomAgentBuilder: boolean;
+  sortOrder: number;
+  isActive?: boolean;
 };

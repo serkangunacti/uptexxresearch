@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { dispatchAgentRun } from "@/lib/github-actions";
 import { getAgentForUser } from "@/lib/access";
 import { resolveCredentialForAgent } from "@/lib/credentials";
 import { requireUser } from "@/lib/server-auth";
+import { executeAgentRun } from "@/lib/runner";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -46,27 +46,12 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       },
     });
 
-    try {
-      await dispatchAgentRun(agent.id, run.id);
-      return NextResponse.json({
-        run,
-        message: "Görev GitHub Actions'a gönderildi. Kuyruğa alındı.",
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
-
-      await prisma.agentRun.update({
-        where: { id: run.id },
-        data: {
-          status: "FAILED",
-          finishedAt: new Date(),
-          error: message,
-          metadata: { reason: "manual", error: message },
-        },
-      });
-
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
+    const report = await executeAgentRun(agent.id, run.id);
+    return NextResponse.json({
+      runId: run.id,
+      reportId: report.id,
+      message: "Ajan çalıştırıldı ve rapor oluşturuldu.",
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -74,6 +59,6 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     if (error instanceof Error && (error.message === "FORBIDDEN" || error.message === "NOT_FOUND")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Sunucu hatası" }, { status: 500 });
   }
 }
